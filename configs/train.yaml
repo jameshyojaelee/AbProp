@@ -1,0 +1,17 @@
+# Training configuration defaults.
+seed: 42
+precision: amp
+gradient_clipping: 1.0
+learning_rate: 1.0e-4
+weight_decay: 1.0e-2
+warmup_steps: 100
+max_steps: 10000
+batch_size: 32
+eval_interval: 500
+checkpoint_interval: 1000
+output_dir: ./outputs
+log_dir: ./outputs/logs
+checkpoint_dir: ./outputs/checkpoints
+mlflow:
+  tracking_uri: ./mlruns
+  experiment_name: abprop_baseline

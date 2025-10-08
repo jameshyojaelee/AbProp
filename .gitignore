@@ -1,0 +1,33 @@
+# Python artifacts
+__pycache__/
+*.py[cod]
+*.egg-info/
+*.egg
+.python-version
+
+# Build outputs
+build/
+dist/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# Environment directories
+.venv/
+venv/
+.conda/
+env/
+
+# Data and outputs
+data/raw/
+data/interim/
+data/processed/
+outputs/
+mlruns/
+
+# IDE / OS specifics
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db
+

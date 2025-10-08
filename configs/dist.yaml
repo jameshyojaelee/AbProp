@@ -1,0 +1,17 @@
+# Distributed training configuration for Slurm + torchrun.
+backend: nccl
+bf16: true
+grad_checkpointing: true
+ddp:
+  find_unused_parameters: false
+  static_graph: true
+fsdp:
+  enabled: false
+  sharding_strategy: full
+  activation_checkpointing: true
+launch:
+  master_addr: auto
+  master_port: 6000
+  nnodes: 1
+  nproc_per_node: 4
+  node_rank: 0

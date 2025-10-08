@@ -1,0 +1,18 @@
+# Default data configuration for AbProp ETL and training.
+raw_dir: ./data/raw
+interim_dir: ./data/interim
+processed_dir: ./data/processed
+splits: [train, val, test]
+species: ["human", "mouse"]
+chain_types: ["H", "L"]
+germline_metadata: true
+liability_features:
+  - nglyc
+  - deamidation
+  - isomerization
+  - oxidation
+  - cysteine_pairs
+  - length
+parquet:
+  filename: oas_sequences.parquet
+  partition_on: ["species", "chain", "split"]
