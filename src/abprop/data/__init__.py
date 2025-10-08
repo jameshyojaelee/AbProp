@@ -8,6 +8,7 @@ from typing import Iterable, List
 
 import pandas as pd
 
+from .dataset import BucketBatchSampler, OASDataset, build_collate_fn
 from .etl import ETLConfig, run_etl
 from .schema import validate_parquet_dataset
 
@@ -30,4 +31,13 @@ def load_parquet_dataset(paths: Iterable[Path | str]) -> pd.DataFrame:
     return pd.concat(dataframes, ignore_index=True) if dataframes else pd.DataFrame()
 
 
-__all__ = ["SequenceRecord", "load_parquet_dataset", "run_etl", "ETLConfig", "validate_parquet_dataset"]
+__all__ = [
+    "SequenceRecord",
+    "load_parquet_dataset",
+    "run_etl",
+    "ETLConfig",
+    "validate_parquet_dataset",
+    "OASDataset",
+    "BucketBatchSampler",
+    "build_collate_fn",
+]

@@ -39,6 +39,11 @@ class Trainer:
         input_ids = batch["input_ids"]
         labels = batch.get("labels", input_ids)
         padding_mask = batch.get("padding_mask")
+        if padding_mask is None and "attention_mask" in batch:
+            attention_mask = batch["attention_mask"].bool()
+            padding_mask = ~attention_mask
+        if padding_mask is not None:
+            padding_mask = padding_mask.bool()
 
         logits, _ = self.model(input_ids, padding_mask)
         loss = nn.functional.cross_entropy(
@@ -55,4 +60,3 @@ class Trainer:
 
 
 __all__ = ["Trainer", "TrainingConfig"]
-

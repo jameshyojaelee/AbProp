@@ -3,16 +3,23 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Dict, List
+from typing import Dict, List, Sequence
 
-
-SPECIAL_TOKENS = ["<pad>", "<bos>", "<eos>", "<mask>"]
-AMINO_ACIDS = list("ACDEFGHIKLMNPQRSTVWY") + ["X"]
+from .aa import (
+    AMINO_ACIDS,
+    ID_TO_TOKEN,
+    SPECIAL_TOKENS,
+    TOKEN_TO_ID,
+    VOCAB,
+    collate_batch,
+    decode,
+    encode,
+)
 
 
 @dataclass
 class AminoAcidTokenizer:
-    """Simple character-level tokenizer for antibody sequences."""
+    """Simple tokenizer wrapper retaining legacy API."""
 
     vocab: List[str]
     token_to_id: Dict[str, int]
@@ -20,23 +27,23 @@ class AminoAcidTokenizer:
 
     @classmethod
     def build_default(cls) -> "AminoAcidTokenizer":
-        vocab = SPECIAL_TOKENS + AMINO_ACIDS
-        token_to_id = {token: idx for idx, token in enumerate(vocab)}
-        id_to_token = {idx: token for token, idx in token_to_id.items()}
-        return cls(vocab=vocab, token_to_id=token_to_id, id_to_token=id_to_token)
+        return cls(vocab=VOCAB, token_to_id=TOKEN_TO_ID, id_to_token=ID_TO_TOKEN)
 
     def encode(self, sequence: str, add_special_tokens: bool = True) -> List[int]:
-        bos = [self.token_to_id["<bos>"]] if add_special_tokens else []
-        eos = [self.token_to_id["<eos>"]] if add_special_tokens else []
-        ids = [self.token_to_id.get(char, self.token_to_id["X"]) for char in sequence]
-        return bos + ids + eos
+        return encode(sequence, add_special=add_special_tokens).tolist()
 
-    def decode(self, ids: List[int], remove_special_tokens: bool = True) -> str:
-        tokens = [self.id_to_token.get(idx, "X") for idx in ids]
-        if remove_special_tokens:
-            tokens = [t for t in tokens if t not in {"<bos>", "<eos>", "<pad>"}]
-        return "".join(tokens)
+    def decode(self, ids: Sequence[int], remove_special_tokens: bool = True) -> str:
+        return decode(ids, strip_special=remove_special_tokens)
 
 
-__all__ = ["AminoAcidTokenizer", "SPECIAL_TOKENS", "AMINO_ACIDS"]
-
+__all__ = [
+    "AminoAcidTokenizer",
+    "SPECIAL_TOKENS",
+    "AMINO_ACIDS",
+    "encode",
+    "decode",
+    "collate_batch",
+    "VOCAB",
+    "TOKEN_TO_ID",
+    "ID_TO_TOKEN",
+]
