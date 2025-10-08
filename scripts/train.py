@@ -52,15 +52,22 @@ def parse_args() -> argparse.Namespace:
 
 
 def instantiate_model(model_cfg: dict) -> SimpleTransformerEncoder:
+    defaults = TransformerConfig()
+    task_weights = model_cfg.get("task_weights", {})
     config = TransformerConfig(
-        vocab_size=model_cfg.get("vocab_size", TransformerConfig.vocab_size),
-        d_model=model_cfg.get("d_model", TransformerConfig.d_model),
-        nhead=model_cfg.get("nhead", TransformerConfig.nhead),
-        num_layers=model_cfg.get("num_layers", TransformerConfig.num_layers),
-        dropout=model_cfg.get("dropout", TransformerConfig.dropout),
+        vocab_size=model_cfg.get("vocab_size", defaults.vocab_size),
+        d_model=model_cfg.get("d_model", defaults.d_model),
+        nhead=model_cfg.get("nhead", defaults.nhead),
+        num_layers=model_cfg.get("num_layers", defaults.num_layers),
+        dim_feedforward=model_cfg.get("dim_feedforward", defaults.dim_feedforward),
+        dropout=model_cfg.get("dropout", defaults.dropout),
         max_position_embeddings=model_cfg.get(
-            "max_position_embeddings", TransformerConfig.max_position_embeddings
+            "max_position_embeddings", defaults.max_position_embeddings
         ),
+        liability_keys=tuple(model_cfg.get("liability_keys", list(defaults.liability_keys))),
+        mlm_weight=task_weights.get("mlm", defaults.mlm_weight),
+        cls_weight=task_weights.get("cls", defaults.cls_weight),
+        reg_weight=task_weights.get("reg", defaults.reg_weight),
     )
     return SimpleTransformerEncoder(config)
 
@@ -114,4 +121,3 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
-
