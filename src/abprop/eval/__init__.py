@@ -1,24 +1,16 @@
 """Evaluation helpers for AbProp models."""
 
-from __future__ import annotations
+from .metrics import (
+    classification_summary,
+    compute_perplexity,
+    regression_per_key,
+    regression_summary,
+)
 
-from typing import Dict
-
-import torch
-
-
-def compute_perplexity(log_likelihood: torch.Tensor) -> float:
-    """Convert average negative log-likelihood into perplexity."""
-    return float(torch.exp(log_likelihood).item())
-
-
-def classification_metrics(predictions: torch.Tensor, targets: torch.Tensor) -> Dict[str, float]:
-    """Compute simple accuracy for classification targets."""
-    preds = predictions.argmax(dim=-1)
-    correct = (preds == targets).float()
-    accuracy = correct.mean().item()
-    return {"accuracy": accuracy}
-
-
-__all__ = ["compute_perplexity", "classification_metrics"]
+__all__ = [
+    "compute_perplexity",
+    "classification_summary",
+    "regression_summary",
+    "regression_per_key",
+]
 

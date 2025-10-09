@@ -1,0 +1,32 @@
+name: abprop
+
+conda_env: ./.conda/abprop
+
+defaults:
+  data_config: configs/data.yaml
+  model_config: configs/model.yaml
+  train_config: configs/train.yaml
+
+entry_points:
+  train:
+    parameters:
+      distributed: {type: string, default: "none"}
+      fsdp: {type: string, default: "off"}
+      grad_ckpt: {type: string, default: "false"}
+      dry_run_steps: {type: int, default: 0}
+      synthetic: {type: bool, default: false}
+    command: >
+      python scripts/train.py
+      --distributed {distributed}
+      --fsdp {fsdp}
+      --grad_ckpt {grad_ckpt}
+      --dry-run-steps {dry_run_steps}
+      {('--synthetic' if synthetic else '')}
+  eval:
+    parameters:
+      checkpoint: {type: string}
+      splits: {type: string, default: "val"}
+    command: >
+      python scripts/eval.py
+      --checkpoint {checkpoint}
+      --splits {splits}

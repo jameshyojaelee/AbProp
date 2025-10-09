@@ -26,7 +26,14 @@ dependencies = [
     "torch>=2.1,<2.2",
     "pyyaml>=6.0",
     "tqdm>=4.66",
+    "matplotlib>=3.7",
 ]
+
+[project.scripts]
+abprop-etl = "abprop.commands.etl:main"
+abprop-train = "abprop.commands.train:main"
+abprop-eval = "abprop.commands.eval:main"
+abprop-launch = "abprop.commands.launch:main"
 
 [project.optional-dependencies]
 dev = [
@@ -35,9 +42,12 @@ dev = [
     "ruff>=0.2.0",
     "mypy>=1.8",
 ]
+serve = [
+    "fastapi>=0.110",
+    "uvicorn>=0.23",
+]
 
 [project.urls]
 Homepage = "https://example.com/abprop"
 Documentation = "https://example.com/abprop/docs"
 Source = "https://example.com/abprop/source"
-

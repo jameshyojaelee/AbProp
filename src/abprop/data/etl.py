@@ -107,14 +107,24 @@ def add_features(df: pd.DataFrame) -> pd.DataFrame:
     df["length"] = df["sequence"].str.len()
     liabilities: List[Dict[str, int]] = []
     liabilities_norm: List[Dict[str, float]] = []
+    cdr_masks: List[List[int]] = []
 
-    for seq, length in zip(df["sequence"], df["length"]):
+    for seq, length, cdr3 in zip(df["sequence"], df["length"], df.get("cdr3", [None] * len(df))):
         counts = find_motifs(seq)
         liabilities.append(counts)
         liabilities_norm.append(normalize_by_length(counts, length))
+        mask = [0] * length
+        if isinstance(cdr3, str) and cdr3:
+            start = seq.find(cdr3)
+            if start != -1:
+                end = min(start + len(cdr3), length)
+                for idx in range(start, end):
+                    mask[idx] = 1
+        cdr_masks.append(mask)
 
     df["liability_counts"] = liabilities
     df["liability_ln"] = liabilities_norm
+    df["cdr_mask"] = cdr_masks
     return df
 
 
@@ -180,6 +190,8 @@ def write_parquet(df: pd.DataFrame, output_dir: Path, partition_cols: Sequence[s
     export_df = df.copy()
     export_df["liability_counts"] = export_df["liability_counts"].apply(json.dumps)
     export_df["liability_ln"] = export_df["liability_ln"].apply(json.dumps)
+    if "cdr_mask" in export_df.columns:
+        export_df["cdr_mask"] = export_df["cdr_mask"].apply(json.dumps)
     export_df.to_parquet(
         output_dir,
         engine="pyarrow",

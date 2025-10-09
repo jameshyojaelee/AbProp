@@ -1,6 +1,10 @@
 """AbProp: Antibody sequence property modeling toolkit."""
 
+from __future__ import annotations
+
 from importlib import metadata
+
+from . import cli, commands, data, eval, models, tokenizers, train, utils
 
 
 def __getattr__(name: str) -> str:
@@ -12,5 +16,14 @@ def __getattr__(name: str) -> str:
     raise AttributeError(name)
 
 
-__all__ = ["__version__"]
-
+__all__ = [
+    "cli",
+    "commands",
+    "data",
+    "eval",
+    "models",
+    "tokenizers",
+    "train",
+    "utils",
+    "__version__",
+]

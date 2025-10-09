@@ -7,11 +7,23 @@ weight_decay: 1.0e-2
 warmup_steps: 100
 max_steps: 10000
 batch_size: 32
+synthetic_samples: 256
 eval_interval: 500
 checkpoint_interval: 1000
 output_dir: ./outputs
 log_dir: ./outputs/logs
 checkpoint_dir: ./outputs/checkpoints
+grad_accumulation: 1
+lr_schedule: cosine
+max_tokens: null
+num_workers: 0
+best_metric: eval_loss
+maximize_metric: false
+report_interval: 50
+task_weights:
+  mlm: 1.0
+  cls: 1.0
+  reg: 1.0
 mlflow:
   tracking_uri: ./mlruns
   experiment_name: abprop_baseline

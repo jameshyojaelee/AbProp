@@ -1,0 +1,73 @@
+Lmod has detected the following error: These module(s) exist but cannot be
+loaded as requested: "foss/2023b"
+
+   Try: "module spider foss/2023b" to see how to load the module(s).
+
+
+
+
+
+The following have been reloaded with a version change:
+  1) CUDA/12.3.0 => CUDA/12.1.1
+  2) GCCcore/13.2.0 => GCCcore/12.3.0
+  3) UCX/1.12.1-GCCcore-11.3.0 => UCX/1.14.1-GCCcore-12.3.0
+  4) numactl/2.0.14-GCCcore-11.3.0 => numactl/2.0.16-GCCcore-12.3.0
+  5) zlib/1.2.12-GCCcore-11.3.0 => zlib/1.2.13-GCCcore-12.3.0
+
+NCCL environment configured:
+  NCCL_DEBUG=warn
+  NCCL_ASYNC_ERROR_HANDLING=1
+  NCCL_SOCKET_IFNAME=^lo,docker
+  NCCL_IB_DISABLE=0
+  NCCL_NET_GDR_LEVEL=PHB
+  MASTER_PORT=6000
+Launching multi-node AbProp training on ne1dg6-010
+Command: torchrun --nnodes=1 --nproc_per_node=3 ...
+[2025-10-08 15:53:48,018] torch.distributed.run: [WARNING] master_addr is only used for static rdzv_backend and when rdzv_endpoint is not specified.
+/nfs/sw/easybuild/software/Python/3.10.4-GCCcore-11.3.0/bin/python: can't open file '/gpfs/commons/home/jameslee/AbProp/python': [Errno 2] No such file or directory
+/nfs/sw/easybuild/software/Python/3.10.4-GCCcore-11.3.0/bin/python: can't open file '/gpfs/commons/home/jameslee/AbProp/python': [Errno 2] No such file or directory
+/nfs/sw/easybuild/software/Python/3.10.4-GCCcore-11.3.0/bin/python: can't open file '/gpfs/commons/home/jameslee/AbProp/python': [Errno 2] No such file or directory
+[2025-10-08 15:53:53,414] torch.distributed.elastic.multiprocessing.api: [ERROR] failed (exitcode: 2) local_rank: 0 (pid: 2262103) of binary: /nfs/sw/easybuild/software/Python/3.10.4-GCCcore-11.3.0/bin/python
+Traceback (most recent call last):
+  File "/gpfs/commons/home/jameslee/.local/bin/torchrun", line 8, in <module>
+    sys.exit(main())
+  File "/gpfs/commons/home/jameslee/.local/lib/python3.10/site-packages/torch/distributed/elastic/multiprocessing/errors/__init__.py", line 346, in wrapper
+    return f(*args, **kwargs)
+  File "/gpfs/commons/home/jameslee/.local/lib/python3.10/site-packages/torch/distributed/run.py", line 806, in main
+    run(args)
+  File "/gpfs/commons/home/jameslee/.local/lib/python3.10/site-packages/torch/distributed/run.py", line 797, in run
+    elastic_launch(
+  File "/gpfs/commons/home/jameslee/.local/lib/python3.10/site-packages/torch/distributed/launcher/api.py", line 134, in __call__
+    return launch_agent(self._config, self._entrypoint, list(args))
+  File "/gpfs/commons/home/jameslee/.local/lib/python3.10/site-packages/torch/distributed/launcher/api.py", line 264, in launch_agent
+    raise ChildFailedError(
+torch.distributed.elastic.multiprocessing.errors.ChildFailedError: 
+============================================================
+python FAILED
+------------------------------------------------------------
+Failures:
+[1]:
+  time      : 2025-10-08_15:53:53
+  host      : ne1dg6-010.nygenome.org
+  rank      : 1 (local_rank: 1)
+  exitcode  : 2 (pid: 2262104)
+  error_file: <N/A>
+  traceback : To enable traceback see: https://pytorch.org/docs/stable/elastic/errors.html
+[2]:
+  time      : 2025-10-08_15:53:53
+  host      : ne1dg6-010.nygenome.org
+  rank      : 2 (local_rank: 2)
+  exitcode  : 2 (pid: 2262105)
+  error_file: <N/A>
+  traceback : To enable traceback see: https://pytorch.org/docs/stable/elastic/errors.html
+------------------------------------------------------------
+Root Cause (first observed failure):
+[0]:
+  time      : 2025-10-08_15:53:53
+  host      : ne1dg6-010.nygenome.org
+  rank      : 0 (local_rank: 0)
+  exitcode  : 2 (pid: 2262103)
+  error_file: <N/A>
+  traceback : To enable traceback see: https://pytorch.org/docs/stable/elastic/errors.html
+============================================================
+srun: error: ne1dg6-010: task 0: Exited with exit code 1

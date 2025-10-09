@@ -232,7 +232,16 @@ def build_collate_fn(
         }
         cdr_values = [example.get("cdr_mask") for example in examples]
         if any(value is not None for value in cdr_values):
-            result["cdr_mask"] = cdr_values
+            token_labels = torch.full_like(input_ids, fill_value=-100)
+            for idx, mask_list in enumerate(cdr_values):
+                if mask_list is None:
+                    continue
+                mask_tensor = torch.tensor(mask_list, dtype=torch.long)
+                length = min(mask_tensor.numel(), input_ids.size(1) - 2)
+                if length <= 0:
+                    continue
+                token_labels[idx, 1 : 1 + length] = mask_tensor[:length]
+            result["token_labels"] = token_labels
 
         if generate_mlm:
             labels = input_ids.clone()

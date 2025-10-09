@@ -8,8 +8,11 @@ from typing import Dict
 
 import torch
 from torch import nn, optim
+import torch.nn.functional as F
 
 from abprop.utils import DEFAULT_OUTPUT_DIR
+
+from .loop import LoopConfig, TrainLoop, build_optimizer, build_scheduler
 
 
 @dataclass
@@ -22,7 +25,7 @@ class TrainingConfig:
 
 
 class Trainer:
-    """Minimal training loop for quick experiments."""
+    """Minimal training loop retained for backwards compatibility."""
 
     def __init__(self, model: nn.Module, config: TrainingConfig | None = None) -> None:
         self.model = model
@@ -46,7 +49,7 @@ class Trainer:
             padding_mask = padding_mask.bool()
 
         logits, _ = self.model(input_ids, padding_mask)
-        loss = nn.functional.cross_entropy(
+        loss = F.cross_entropy(
             logits.view(-1, logits.size(-1)),
             labels.view(-1),
             ignore_index=0,
@@ -59,4 +62,11 @@ class Trainer:
         return {"loss": float(loss.detach().cpu())}
 
 
-__all__ = ["Trainer", "TrainingConfig"]
+__all__ = [
+    "Trainer",
+    "TrainingConfig",
+    "LoopConfig",
+    "TrainLoop",
+    "build_optimizer",
+    "build_scheduler",
+]

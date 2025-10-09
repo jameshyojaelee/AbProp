@@ -1,7 +1,10 @@
 PYTHON ?= python
 PIP ?= pip
 
-.PHONY: install dev lint format typecheck test clean
+.PHONY: env install dev lint format typecheck test clean train dist-train
+
+env:
+	@echo "Configure your environment here (e.g., conda/mamba)."
 
 install:
 	$(PIP) install -e .
@@ -19,8 +22,13 @@ typecheck:
 	mypy src
 
 test:
-	pytest -q
+	PYTHONPATH=src pytest -q
+
+train:
+	abprop-train --distributed none
+
+dist-train:
+	abprop-launch --nodes 1 --gpus-per-node 4 --config configs/train.yaml
 
 clean:
 	rm -rf build dist .pytest_cache *.egg-info
-

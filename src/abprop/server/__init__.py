@@ -7,6 +7,7 @@ from typing import Dict
 
 from abprop.tokenizers import AminoAcidTokenizer
 from abprop.models import SimpleTransformerEncoder, TransformerConfig
+from .app import create_app
 
 
 @dataclass
@@ -28,5 +29,4 @@ class InferenceEngine:
         return {"mlm_perplexity": 0.0, "cdr_frame_prob": 0.5}
 
 
-__all__ = ["InferenceEngine"]
-
+__all__ = ["InferenceEngine", "create_app"]

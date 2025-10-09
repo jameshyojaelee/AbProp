@@ -10,6 +10,7 @@ import torch.nn.functional as F
 from torch import nn
 
 from abprop.tokenizers import AMINO_ACIDS, SPECIAL_TOKENS
+from abprop.eval.metrics import classification_summary, regression_summary
 
 
 @dataclass
@@ -194,13 +195,20 @@ class AbPropModel(nn.Module):
                 losses["cls_loss"] = cls_loss
                 total_loss = total_loss + self.config.cls_weight * cls_loss
                 loss_tracked = True
-                predictions = token_logits.argmax(dim=-1)
                 valid_mask = prepared_labels != -100
                 if valid_mask.any():
-                    accuracy = (
-                        (predictions[valid_mask] == prepared_labels[valid_mask]).float().mean()
-                    )
+                    valid_logits = token_logits[valid_mask]
+                    valid_labels = prepared_labels[valid_mask]
+                    predictions = valid_logits.argmax(dim=-1)
+                    accuracy = (predictions == valid_labels).float().mean()
                     metrics["cls_accuracy"] = accuracy.detach()
+                    summary = classification_summary(
+                        int(((predictions == 1) & (valid_labels == 1)).sum()),
+                        int(((predictions == 1) & (valid_labels == 0)).sum()),
+                        int(((predictions == 0) & (valid_labels == 0)).sum()),
+                        int(((predictions == 0) & (valid_labels == 1)).sum()),
+                    )
+                    metrics["cls_f1"] = torch.tensor(summary["f1"], device=input_ids.device)
 
         if "reg" in tasks:
             reg_targets = self._prepare_regression_targets(
@@ -215,6 +223,12 @@ class AbPropModel(nn.Module):
                 losses["reg_loss"] = reg_loss
                 total_loss = total_loss + self.config.reg_weight * reg_loss
                 loss_tracked = True
+                preds_det = regression_logits.detach()
+                targets_det = reg_targets.detach()
+                reg_summary = regression_summary(preds_det, targets_det)
+                metrics["reg_mse"] = torch.tensor(reg_summary["mse"], device=input_ids.device)
+                metrics["reg_r2"] = torch.tensor(reg_summary["r2"], device=input_ids.device)
+                metrics["reg_spearman"] = torch.tensor(reg_summary["spearman"], device=input_ids.device)
 
         if loss_tracked:
             outputs["loss"] = total_loss
@@ -234,7 +248,7 @@ class AbPropModel(nn.Module):
         if token_labels is None:
             return None
         if isinstance(token_labels, torch.Tensor):
-            return token_labels.to(device)
+            return token_labels.to(device=device, dtype=torch.long)
 
         batch_size, seq_len = attention_mask.shape
         labels = torch.full((batch_size, seq_len), -100, dtype=torch.long, device=device)
