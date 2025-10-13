@@ -1,0 +1,2 @@
+Requirement already satisfied: scipy in /nfs/sw/easybuild/software/SciPy-bundle/2022.05-foss-2022a/lib/python3.10/site-packages (1.8.1)
+Requirement already satisfied: numpy<1.25.0,>=1.17.3 in /nfs/sw/easybuild/software/SciPy-bundle/2022.05-foss-2022a/lib/python3.10/site-packages (from scipy) (1.22.3)

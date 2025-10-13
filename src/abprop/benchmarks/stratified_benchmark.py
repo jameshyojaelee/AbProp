@@ -24,6 +24,18 @@ class StratifiedDifficultyBenchmark(Benchmark):
         if not self.strata_root.exists():
             raise FileNotFoundError(f"Stratified dataset directory not found: {self.strata_root}")
 
+    # These abstract methods are required by the Benchmark base class but are not
+    # used directly because the evaluation happens inside `run()`. They are
+    # provided solely to satisfy the interface.
+    def load_data(self) -> None:  # type: ignore[override]
+        return None
+
+    def evaluate(self, model: torch.nn.Module, dataloader) -> Dict[str, object]:  # type: ignore[override]
+        return {}
+
+    def report(self, results: Dict[str, object]) -> BenchmarkResult:  # type: ignore[override]
+        return BenchmarkResult(self.name, {}, {}, {})
+
     def run(self, model: torch.nn.Module) -> BenchmarkResult:
         output_dir = self.config.output_dir / self.name
         output_dir.mkdir(parents=True, exist_ok=True)

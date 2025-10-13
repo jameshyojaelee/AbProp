@@ -101,13 +101,26 @@ class _StratumDataset(Dataset):
 
     def __getitem__(self, idx: int) -> Dict[str, object]:
         row = self.frame.iloc[idx]
+        liability_raw = _maybe_parse_json(row["liability_ln"])
+        liability_cast: Dict[str, float] = {}
+        if isinstance(liability_raw, Mapping):
+            for key, value in liability_raw.items():
+                try:
+                    liability_cast[str(key)] = float(value)
+                except (TypeError, ValueError):
+                    liability_cast[str(key)] = 0.0
+
         item: Dict[str, object] = {
             "sequence": str(row["sequence"]),
             "chain": str(row["chain"]),
-            "liability_ln": _maybe_parse_json(row["liability_ln"]),
+            "liability_ln": liability_cast,
         }
         if self.has_cdr and pd.notna(row["cdr_mask"]):
-            item["cdr_mask"] = _maybe_parse_json(row["cdr_mask"])
+            parsed = _maybe_parse_json(row["cdr_mask"])
+            if isinstance(parsed, (list, tuple)):
+                item["cdr_mask"] = [int(x) for x in parsed]
+            else:
+                item["cdr_mask"] = None
         return item
 
 
@@ -312,4 +325,3 @@ __all__ = [
     "discover_strata",
     "evaluate_strata",
 ]
-

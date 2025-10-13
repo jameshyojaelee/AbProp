@@ -228,10 +228,14 @@ def generate_html_report(
         """
 
         for metric_name, metric_value in result.metrics.items():
+            if isinstance(metric_value, (float, int)):
+                display_value = f"{metric_value:.4f}"
+            else:
+                display_value = str(metric_value)
             html += f"""
                     <tr>
                         <td>{metric_name}</td>
-                        <td>{metric_value:.4f if isinstance(metric_value, float) else metric_value}</td>
+                        <td>{display_value}</td>
                     </tr>
             """
 
