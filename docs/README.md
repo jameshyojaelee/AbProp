@@ -61,6 +61,39 @@ Comprehensive training documentation covering:
 
 ---
 
+### 📊 [BENCHMARK_SUITE.md](BENCHMARK_SUITE.md)
+**Comprehensive benchmark infrastructure for model evaluation**
+
+Complete guide to the AbProp benchmark suite with 5 evaluation tracks:
+
+**Benchmark Tracks:**
+1. **Perplexity Benchmark**: Language modeling quality on natural sequences
+2. **CDR Classification Benchmark**: Token-level CDR region prediction
+3. **Liability Benchmark**: Regression metrics for developability liabilities
+4. **Developability Benchmark**: Therapeutic antibody ranking and clinical progression
+5. **Zero-Shot Benchmark**: Generalization to unseen species and germlines
+
+**Key Features:**
+- Modular, registry-based architecture
+- Comprehensive metrics with statistical analysis
+- Automated visualization generation
+- MLflow integration for experiment tracking
+- HTML report generation
+- Parallel execution support
+
+**Quick Start:**
+```bash
+# Run all benchmarks
+python scripts/run_benchmarks.py --checkpoint path/to/checkpoint.pt --all --html-report
+
+# Run specific benchmarks
+python scripts/run_benchmarks.py --checkpoint path/to/checkpoint.pt --benchmarks perplexity liability
+```
+
+**Use this when:** You need to comprehensively evaluate a trained model across multiple dimensions.
+
+---
+
 ### 🎯 [EVALUATION_PROMPTS.md](EVALUATION_PROMPTS.md)
 **Detailed prompts for building evaluation infrastructure**
 
@@ -183,6 +216,8 @@ When adding new documentation:
 |----------|--------------|--------|
 | REAL_DATA_SUMMARY.md | Oct 13, 2025 | ✓ Complete |
 | DATA_ACQUISITION_GUIDE.md | Oct 12, 2025 | ✓ Complete |
+| TRAINING_GUIDE.md | Oct 13, 2025 | ✓ Complete |
+| BENCHMARK_SUITE.md | Oct 13, 2025 | ✓ Complete |
 | EVALUATION_PROMPTS.md | Oct 12, 2025 | ✓ Complete |
 
 ---
