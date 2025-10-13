@@ -29,6 +29,7 @@ On the cluster, follow the HPC setup below for module loads and conda-based inst
 - `tests/`: Unit test skeletons to extend with ETL/tokenizer coverage.
 - `data/`: Default data directories (`raw`, `interim`, `processed`).
 - `outputs/`: Default experiment output directory (logs, checkpoints, metrics).
+- `docs/`: Supplementary documentation (see [docs/README.md](docs/README.md) for details).
 
 ## Usage
 
@@ -150,6 +151,18 @@ mlflow ui --backend-store-uri ./mlruns
 ```
 
 
+## Data
+
+The project includes real antibody sequence data from structural databases:
+
+- **Processed Dataset (Recommended)**: `data/processed/oas_real_full/` (1,502 sequences)
+  - Source: SAbDab/PDB crystal structures
+  - Train: 1,209 | Val: 144 | Test: 149
+  - 38 species including human, mouse, llama, etc.
+  - Resolution < 4.0 Å, high-quality structures only
+
+For details on data acquisition, processing, and benchmarking datasets, see **[docs/README.md](docs/README.md)**.
+
 ## Troubleshooting
 
 **NCCL**
@@ -161,4 +174,11 @@ mlflow ui --backend-store-uri ./mlruns
 - Confirm rendezvous variables by printing `$MASTER_ADDR` and `$MASTER_PORT` in your batch script.
 - Test connectivity with `srun --ntasks=$WORLD_SIZE hostname` prior to launching torchrun.
 - For PMI versions that conflict with torchrun, add `--mpi=pmix` (or your site default) to `srun`.
+
+## Documentation
+
+See the [`docs/`](docs/) directory for detailed documentation:
+- **[REAL_DATA_SUMMARY.md](docs/REAL_DATA_SUMMARY.md)** - Real antibody data statistics and usage
+- **[DATA_ACQUISITION_GUIDE.md](docs/DATA_ACQUISITION_GUIDE.md)** - How to download additional data
+- **[EVALUATION_PROMPTS.md](docs/EVALUATION_PROMPTS.md)** - Roadmap for evaluation infrastructure
 
