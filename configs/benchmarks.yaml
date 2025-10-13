@@ -1,0 +1,105 @@
+# AbProp Benchmark Suite Configuration
+# Defines datasets and parameters for each benchmark track
+
+# Global settings
+output_dir: ./outputs/benchmarks
+batch_size: 32
+device: cuda  # or cpu
+mlflow_tracking: true
+
+# Perplexity Benchmark
+# Evaluates MLM perplexity on natural antibody sequences
+perplexity:
+  data_path: ./data/processed/oas
+  batch_size: 32
+  max_samples: null  # null = use all data
+  stratify_by:
+    - chain_type
+    - species
+    - sequence_length
+  description: "Evaluate perplexity on natural antibody sequences stratified by chain, species, and length"
+
+# CDR Classification Benchmark
+# Token-level CDR region prediction
+cdr_classification:
+  data_path: ./data/processed/oas
+  batch_size: 32
+  max_samples: null
+  cdr_schemes:
+    - kabat
+    - chothia
+    - imgt
+  description: "Token-level CDR classification with precision, recall, F1 per region"
+
+# Liability Benchmark
+# Regression metrics for antibody liabilities
+liability:
+  data_path: ./data/processed/oas
+  batch_size: 32
+  max_samples: null
+  liability_features:
+    - nglyc
+    - deamidation
+    - isomerization
+    - oxidation
+    - cysteine_pairs
+    - length
+  risk_stratification:
+    enabled: true
+    thresholds: [33, 66]  # percentiles
+  description: "Liability prediction with calibration analysis and risk stratification"
+
+# Developability Benchmark
+# Therapeutic antibody ranking and clinical progression prediction
+developability:
+  data_path: ./data/processed/therapeutic  # Specialized therapeutic dataset
+  batch_size: 16
+  max_samples: null
+  clinical_phases:
+    - preclinical
+    - phase1
+    - phase2
+    - phase3
+    - approved
+  aggregation_correlation: true
+  immunogenicity_correlation: true
+  description: "Therapeutic antibody developability with ROC-AUC and ranking metrics"
+
+# Zero-Shot Generalization Benchmark
+# Evaluate on unseen species and germlines
+zero_shot:
+  data_path: ./data/processed/zero_shot  # Dataset with diverse/rare species
+  batch_size: 32
+  max_samples: null
+  unseen_species:
+    - camel
+    - llama
+    - alpaca
+    - shark
+    - chicken
+  unseen_germline_families:
+    - VHH  # Nanobodies
+    - IgNAR  # Shark antibodies
+  transfer_learning_metrics: true
+  description: "Zero-shot generalization to unseen species and germline families"
+
+# Reporting options
+reporting:
+  html_report: true
+  json_summary: true
+  plot_format: png
+  plot_dpi: 150
+  per_benchmark_reports: true
+
+# Parallel execution settings
+parallel:
+  enabled: false  # Set to true for parallel benchmark execution (experimental)
+  max_workers: 4
+
+# MLflow settings
+mlflow:
+  experiment_name: abprop-benchmarks
+  tracking_uri: null  # null = use default
+  tags:
+    framework: pytorch
+    task: antibody_property_prediction
