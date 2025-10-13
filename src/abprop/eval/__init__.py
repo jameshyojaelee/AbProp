@@ -1,10 +1,12 @@
 """Evaluation helpers for AbProp models."""
 
-from .metrics import (
-    classification_summary,
-    compute_perplexity,
-    regression_per_key,
-    regression_summary,
+from .metrics import classification_summary, compute_perplexity, regression_per_key, regression_summary
+from .stratified import (
+    StratifiedEvalConfig,
+    StratifiedEvaluationResult,
+    StratumMetrics,
+    discover_strata,
+    evaluate_strata,
 )
 
 __all__ = [
@@ -12,5 +14,9 @@ __all__ = [
     "classification_summary",
     "regression_summary",
     "regression_per_key",
+    "StratifiedEvalConfig",
+    "StratifiedEvaluationResult",
+    "StratumMetrics",
+    "discover_strata",
+    "evaluate_strata",
 ]
-

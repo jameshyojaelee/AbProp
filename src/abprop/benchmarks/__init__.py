@@ -35,6 +35,7 @@ from . import cdr_classification_benchmark
 from . import developability_benchmark
 from . import liability_benchmark
 from . import perplexity_benchmark
+from . import stratified_benchmark
 from . import zero_shot_benchmark
 
 __all__ = [
@@ -47,5 +48,6 @@ __all__ = [
     "developability_benchmark",
     "liability_benchmark",
     "perplexity_benchmark",
+    "stratified_benchmark",
     "zero_shot_benchmark",
 ]

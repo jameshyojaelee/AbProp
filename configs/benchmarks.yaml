@@ -83,6 +83,18 @@ zero_shot:
   transfer_learning_metrics: true
   description: "Zero-shot generalization to unseen species and germline families"
 
+# Stratified Difficulty Benchmark
+# Evaluate difficulty-specific performance cliffs
+stratified_difficulty:
+  data_path: ./data/processed/stratified_test
+  batch_size: 32
+  max_samples: null
+  focus_metrics:
+    - mlm_perplexity
+    - cls_f1
+    - reg_r2
+  description: "Difficulty-stratified evaluation covering length, complexity, liability, germline, and species buckets"
+
 # Reporting options
 reporting:
   html_report: true

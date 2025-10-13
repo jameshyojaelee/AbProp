@@ -156,8 +156,8 @@ def verify_documentation():
     docs = [
         "src/abprop/benchmarks/README.md",
         "docs/BENCHMARK_SUITE.md",
-        "BENCHMARK_IMPLEMENTATION_SUMMARY.md",
-        "BENCHMARK_QUICK_REFERENCE.md",
+        "docs/BENCHMARK_IMPLEMENTATION_SUMMARY.md",
+        "docs/BENCHMARK_QUICK_REFERENCE.md",
     ]
 
     all_exist = True

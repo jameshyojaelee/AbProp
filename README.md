@@ -136,6 +136,20 @@ abprop-launch --nodes 2 --gpus-per-node 4 --config configs/train.yaml
 
 Manual multi-node example: edit `slurm/multi_node.sbatch` and submit with `sbatch` for full control over resources.
 
+Difficulty-stratified evaluation:
+
+```bash
+python scripts/create_difficulty_splits.py \
+  --input data/processed/oas_real_full \
+  --output data/processed/stratified_test \
+  --split test
+
+python scripts/run_benchmarks.py \
+  --checkpoint outputs/checkpoints/best.pt \
+  --benchmarks stratified_difficulty \
+  --html-report
+```
+
 ## MLflow Tracking
 
 By default AbProp logs to `./mlruns`. Override with `export MLFLOW_TRACKING_URI=/path/to/mlruns` before launching training. Each run logs:
@@ -181,4 +195,3 @@ See the [`docs/`](docs/) directory for detailed documentation:
 - **[REAL_DATA_SUMMARY.md](docs/REAL_DATA_SUMMARY.md)** - Real antibody data statistics and usage
 - **[DATA_ACQUISITION_GUIDE.md](docs/DATA_ACQUISITION_GUIDE.md)** - How to download additional data
 - **[EVALUATION_PROMPTS.md](docs/EVALUATION_PROMPTS.md)** - Roadmap for evaluation infrastructure
-

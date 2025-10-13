@@ -291,6 +291,7 @@ def main(argv: list[str] | None = None) -> None:
     from abprop.benchmarks import developability_benchmark  # noqa: F401
     from abprop.benchmarks import liability_benchmark  # noqa: F401
     from abprop.benchmarks import perplexity_benchmark  # noqa: F401
+    from abprop.benchmarks import stratified_benchmark  # noqa: F401
     from abprop.benchmarks import zero_shot_benchmark  # noqa: F401
 
     registry = get_registry()

@@ -150,6 +150,8 @@ A structured roadmap with 25+ detailed prompts organized into 7 phases:
 - **Process Data**: `scripts/process_real_data_etl.py`
 - **Therapeutic Dataset**: `scripts/curate_therapeutic_dataset.py`
 - **CDR Gold Standard**: `scripts/build_cdr_gold_standard.py`
+- **Difficulty Splits**: `scripts/create_difficulty_splits.py`
+- **Difficulty Plots**: `scripts/plot_difficulty_performance.py`
 
 ### Dataset Comparison
 

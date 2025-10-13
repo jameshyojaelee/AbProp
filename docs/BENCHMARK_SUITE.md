@@ -4,7 +4,7 @@
 
 ## Overview
 
-The AbProp benchmark suite provides a standardized, modular framework for evaluating antibody property prediction models across multiple dimensions. It includes 5 specialized benchmarks covering language modeling, CDR prediction, liability assessment, developability ranking, and zero-shot generalization.
+The AbProp benchmark suite provides a standardized, modular framework for evaluating antibody property prediction models across multiple dimensions. It includes 6 specialized benchmarks covering language modeling, CDR prediction, liability assessment, developability ranking, zero-shot generalization, and difficulty stratification.
 
 ### Key Features
 
@@ -14,6 +14,7 @@ The AbProp benchmark suite provides a standardized, modular framework for evalua
 ✅ **MLflow Integration**: Automatic logging of metrics and artifacts
 ✅ **Parallel Execution**: Optional parallel benchmark running
 ✅ **HTML Reports**: Shareable, interactive evaluation reports
+✅ **Difficulty Diagnostics**: Built-in tooling to expose performance cliffs
 
 ## Quick Start
 
@@ -264,6 +265,50 @@ print(f"Perplexity: {result.metrics['overall_perplexity']:.2f}")
   "perplexity_llama": 5.94
 }
 ```
+
+---
+
+### 6. Difficulty-Stratified Benchmark
+
+**Purpose**: Reveal performance cliffs by evaluating the model across targeted difficulty buckets.
+
+**What it measures**:
+- MLM perplexity, CDR classification, and liability regression metrics per difficulty bucket
+- Delta-to-baseline metrics that expose regressions on challenging subsets
+- Comparative plots across length, complexity, liability load, germline frequency, and species
+
+**Why it matters**: Aggregate metrics can mask systematic failures (e.g., long sequences, rare germlines, zero-shot species). This benchmark surfaces those gaps so you can prioritise mitigation.
+
+**Prerequisites**:
+1. Generate balanced stratified splits:
+   ```bash
+   python scripts/create_difficulty_splits.py \
+       --input data/processed/oas_real_full \
+       --output data/processed/stratified_test \
+       --split test
+   ```
+2. Ensure `configs/benchmarks.yaml` points `stratified_difficulty.data_path` at the new directory.
+
+**Outputs**:
+- `stratified_metrics.json` – Full metric breakdown by dimension/bucket
+- `plots/` – Difficulty curves, heatmaps, and error analysis charts (auto-generated)
+- Registry metrics keyed as `dimension:bucket:metric` for MLflow logging
+
+**Example metrics**:
+```json
+{
+  "length:short:mlm_perplexity": 3.98,
+  "length:long:mlm_perplexity": 5.42,
+  "complexity:unusual_composition:cls_f1": 0.61,
+  "germline:novel_germline:reg_r2": 0.32,
+  "species:other_species:mlm_perplexity_delta": 1.27
+}
+```
+
+**Interpretation tips**:
+- Focus on the largest positive `*_delta` values—they mark the steepest drops vs baseline.
+- Check `heatmap_*.png` to spot clusters of weakness across buckets.
+- Re-run after remediation steps (curriculum finetuning, targeted augmentation) to confirm improvements.
 
 ---
 
@@ -659,7 +704,8 @@ python scripts/run_benchmarks.py --checkpoint path/to/checkpoint.pt --all
 | Liability | 10,000 seqs | 32 | V100 | ~6 min |
 | Developability | 1,000 seqs | 16 | V100 | ~2 min |
 | Zero-Shot | 5,000 seqs | 32 | V100 | ~4 min |
-| **Total** | - | - | V100 | **~22 min** |
+| Difficulty-Stratified | 5,000 seqs | 32 | V100 | ~5 min |
+| **Total** | - | - | V100 | **~27 min** |
 
 ### Memory Usage
 
@@ -670,6 +716,7 @@ python scripts/run_benchmarks.py --checkpoint path/to/checkpoint.pt --all
 | Liability | ~9 GB | ~16 GB |
 | Developability | ~7 GB | ~12 GB |
 | Zero-Shot | ~8 GB | ~14 GB |
+| Difficulty-Stratified | ~9 GB | ~16 GB |
 
 ## Future Enhancements
 

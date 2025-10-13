@@ -8,6 +8,13 @@ from typing import Iterable, List
 
 import pandas as pd
 
+from .cross_validation import (
+    ClonotypeAwareKFold,
+    CVFold,
+    GroupKFoldDataset,
+    generate_cv_folds,
+    stratified_cv_summary,
+)
 from .dataset import BucketBatchSampler, OASDataset, build_collate_fn
 from .etl import ETLConfig, run_etl
 from .schema import validate_parquet_dataset
@@ -40,4 +47,9 @@ __all__ = [
     "OASDataset",
     "BucketBatchSampler",
     "build_collate_fn",
+    "ClonotypeAwareKFold",
+    "CVFold",
+    "GroupKFoldDataset",
+    "generate_cv_folds",
+    "stratified_cv_summary",
 ]
