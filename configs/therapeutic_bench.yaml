@@ -1,0 +1,159 @@
+# Therapeutic Antibody Benchmark Configuration
+
+# Dataset paths
+dataset_path: ./data/processed/therapeutic_benchmark/therapeutic_antibodies_full.parquet
+partitioned_path: ./data/processed/therapeutic_benchmark/therapeutic_antibodies.parquet
+summary_path: ./data/processed/therapeutic_benchmark/therapeutic_summary.csv
+
+# Evaluation settings
+evaluation:
+  # Metrics to compute
+  metrics:
+    - liability_correlation  # Correlation between predicted and actual liabilities
+    - developability_ranking  # Ranking quality (Spearman correlation with developability_score)
+    - stage_stratified  # Performance stratified by clinical stage
+    - issue_detection  # Ability to detect known developability issues
+
+  # Clinical stage stratification
+  stages:
+    - Approved
+    - Phase 3
+    - Phase 2
+    - Phase 1
+
+  # Known issue types to evaluate
+  issue_types:
+    - aggregation
+    - immunogenicity
+    - deamidation
+    - oxidation
+
+  # Liability types (must match model outputs)
+  liability_keys:
+    - nglyc
+    - deamidation
+    - isomerization
+    - oxidation
+    - free_cysteines
+
+# Filtering options
+filters:
+  min_stage_rank: 2  # 2 = Phase 1 or higher
+  max_sequence_length: 150
+  min_sequence_length: 80
+  include_chains:
+    - H  # Heavy chain
+    - L  # Light chain
+
+# Developability thresholds
+thresholds:
+  high_developability: 0.75  # Approved and late-stage Phase 3
+  medium_developability: 0.5  # Phase 2/3
+  low_developability: 0.3    # Phase 1 or discontinued
+
+  # Liability risk levels (total liability score)
+  low_risk: 0.05
+  medium_risk: 0.10
+  high_risk: 0.20
+
+# Benchmarking tasks
+tasks:
+  # Task 1: Predict liabilities for therapeutic antibodies
+  liability_prediction:
+    enabled: true
+    weight: 1.0
+    metrics:
+      - mse
+      - mae
+      - spearman
+      - r2
+    per_liability: true  # Compute metrics per liability type
+
+  # Task 2: Rank therapeutics by developability
+  developability_ranking:
+    enabled: true
+    weight: 1.0
+    metrics:
+      - spearman
+      - kendall_tau
+      - top_k_accuracy  # % of top-k most developable correctly identified
+    top_k_values: [5, 10, 20]
+
+  # Task 3: Detect known developability issues
+  issue_detection:
+    enabled: true
+    weight: 0.5
+    metrics:
+      - precision
+      - recall
+      - f1
+      - auc_roc
+    binary_classification: true  # Has issues vs no issues
+
+  # Task 4: Clinical stage prediction (as proxy for developability)
+  stage_prediction:
+    enabled: false  # Optional task
+    weight: 0.3
+    metrics:
+      - accuracy
+      - macro_f1
+
+# Reporting
+reporting:
+  output_dir: ./outputs/therapeutic_benchmark
+  formats:
+    - json  # Machine-readable results
+    - csv   # Tabular results
+    - html  # Interactive report
+  include_plots:
+    - liability_scatter  # Predicted vs actual liabilities
+    - developability_scatter  # Predicted vs actual developability scores
+    - stage_boxplots  # Liability distributions by clinical stage
+    - issue_confusion_matrix  # Confusion matrix for issue detection
+    - top_k_curves  # Top-k accuracy curves
+
+# Comparison baselines
+baselines:
+  # Simple motif counting (existing utils/liabilities.py)
+  motif_counting:
+    enabled: true
+    description: "Direct motif counting without ML"
+
+  # Sequence length baseline
+  length_baseline:
+    enabled: true
+    description: "Predict liabilities proportional to sequence length"
+
+  # Random baseline
+  random:
+    enabled: true
+    description: "Random predictions (sanity check)"
+
+# Statistical tests
+statistical_tests:
+  enabled: true
+  methods:
+    - paired_t_test  # Compare against baselines
+    - wilcoxon  # Non-parametric alternative
+  significance_level: 0.05
+  bonferroni_correction: true
+
+# Cross-validation (optional)
+cross_validation:
+  enabled: false
+  n_folds: 5
+  stratify_by: clinical_stage
+
+# Notes
+notes: |
+  This benchmark evaluates AbProp's ability to:
+  1. Predict developability liabilities in therapeutic antibodies
+  2. Rank antibodies by overall developability
+  3. Detect known developability issues
+  4. Generalize to clinical-stage antibodies
+
+  The benchmark uses a curated set of therapeutic antibodies with
+  known clinical outcomes and documented developability issues.
+
+  Performance on this benchmark indicates readiness for real-world
+  antibody engineering applications.
