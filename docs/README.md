@@ -37,6 +37,30 @@ Comprehensive guide for acquiring antibody sequence data:
 
 ---
 
+### 🚀 [TRAINING_GUIDE.md](TRAINING_GUIDE.md)
+**Complete guide to training AbProp models on real data**
+
+Comprehensive training documentation covering:
+- Environment setup (conda, virtualenv, HPC modules)
+- Configuration files (data, model, training)
+- Training commands (single GPU, multi-GPU, Slurm)
+- Monitoring (MLflow, logs, checkpoints)
+- Troubleshooting (GPU memory, NCCL, imports)
+- Performance expectations and metrics
+- Advanced topics (transfer learning, task weighting)
+
+**Key Sections:**
+- **Prerequisites**: Environment setup and verification
+- **Configuration**: Dataset paths and training parameters
+- **Training**: Single/multi-GPU and multi-node commands
+- **Monitoring**: MLflow UI and log files
+- **Evaluation**: Test set evaluation and benchmarking
+- **Troubleshooting**: Common issues and solutions
+
+**Use this when:** You're ready to train models on the real antibody dataset.
+
+---
+
 ### 🎯 [EVALUATION_PROMPTS.md](EVALUATION_PROMPTS.md)
 **Detailed prompts for building evaluation infrastructure**
 
