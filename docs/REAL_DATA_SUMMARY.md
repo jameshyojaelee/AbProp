@@ -103,7 +103,7 @@ This document summarizes the real antibody sequence data that has been acquired 
 - Chain type (H/L)
 - Species
 - Length
-- Liability counts (nglyc, deamidation, isomerization, oxidation, cysteine_pairs)
+- Liability counts (nglyc, deamidation, isomerization, oxidation, free_cysteines)
 - Liability scores (length-normalized)
 - CDR masks (binary, approximate)
 - Germline annotations (currently "UNKNOWN" - requires ANARCI)

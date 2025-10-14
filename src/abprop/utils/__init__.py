@@ -27,7 +27,7 @@ from .mlflowx import (
     log_params as mlflow_log_params,
     mlflow_run,
 )
-from .liabilities import find_motifs, normalize_by_length
+from .liabilities import CANONICAL_LIABILITY_KEYS, find_motifs, normalize_by_length
 
 
 DEFAULT_DATA_DIR = Path("data")
@@ -44,6 +44,7 @@ __all__ = [
     "DEFAULT_DATA_DIR",
     "DEFAULT_OUTPUT_DIR",
     "load_yaml_config",
+    "CANONICAL_LIABILITY_KEYS",
     "find_motifs",
     "normalize_by_length",
     "init_distributed",

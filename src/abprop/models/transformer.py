@@ -10,6 +10,7 @@ import torch.nn.functional as F
 from torch import nn
 
 from abprop.tokenizers import AMINO_ACIDS, SPECIAL_TOKENS
+from abprop.utils.liabilities import CANONICAL_LIABILITY_KEYS
 from abprop.eval.metrics import classification_summary, regression_summary
 
 
@@ -22,13 +23,7 @@ class TransformerConfig:
     dim_feedforward: int = 1536
     dropout: float = 0.1
     max_position_embeddings: int = 1024
-    liability_keys: Tuple[str, ...] = (
-        "nglyc",
-        "deamidation",
-        "isomerization",
-        "oxidation",
-        "free_cysteines",
-    )
+    liability_keys: Tuple[str, ...] = CANONICAL_LIABILITY_KEYS
     mlm_weight: float = 1.0
     cls_weight: float = 1.0
     reg_weight: float = 1.0

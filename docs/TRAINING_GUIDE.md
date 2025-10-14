@@ -81,8 +81,7 @@ liability_features:
   - deamidation
   - isomerization
   - oxidation
-  - cysteine_pairs
-  - length
+  - free_cysteines
 parquet:
   filename: oas_sequences.parquet
   partition_on: ["species", "chain", "split"]

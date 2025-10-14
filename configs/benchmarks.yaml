@@ -38,12 +38,12 @@ liability:
   batch_size: 32
   max_samples: null
   liability_features:
+    # Must align with model.config.liability_keys / CANONICAL_LIABILITY_KEYS
     - nglyc
     - deamidation
     - isomerization
     - oxidation
-    - cysteine_pairs
-    - length
+    - free_cysteines
   risk_stratification:
     enabled: true
     thresholds: [33, 66]  # percentiles

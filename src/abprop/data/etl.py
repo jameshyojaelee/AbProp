@@ -10,7 +10,7 @@ from typing import Dict, Iterable, List, Optional, Sequence, Tuple
 
 import pandas as pd
 
-from abprop.utils import find_motifs, normalize_by_length
+from abprop.utils import CANONICAL_LIABILITY_KEYS, find_motifs, normalize_by_length
 
 RAW_COLUMN_ALIASES: Dict[str, Tuple[str, ...]] = {
     "sequence": ("sequence", "sequence_alignment_aa", "sequence_aa", "seq"),
@@ -111,8 +111,9 @@ def add_features(df: pd.DataFrame) -> pd.DataFrame:
 
     for seq, length, cdr3 in zip(df["sequence"], df["length"], df.get("cdr3", [None] * len(df))):
         counts = find_motifs(seq)
-        liabilities.append(counts)
-        liabilities_norm.append(normalize_by_length(counts, length))
+        ordered_counts = {key: counts.get(key, 0) for key in CANONICAL_LIABILITY_KEYS}
+        liabilities.append(ordered_counts)
+        liabilities_norm.append(normalize_by_length(ordered_counts, length))
         mask = [0] * length
         if isinstance(cdr3, str) and cdr3:
             start = seq.find(cdr3)

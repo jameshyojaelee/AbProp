@@ -6,3 +6,13 @@ perplexity:
   data_path: ./data/processed/oas_real_full
   batch_size: 8
   max_samples: 8
+liability:
+  data_path: ./data/processed/oas_real_full
+  batch_size: 8
+  max_samples: 8
+  liability_features:
+    - nglyc
+    - deamidation
+    - isomerization
+    - oxidation
+    - free_cysteines

@@ -11,12 +11,12 @@ species: ["human", "mouse"]
 chain_types: ["H", "L"]
 germline_metadata: true
 liability_features:
+  # Canonical order matches CANONICAL_LIABILITY_KEYS in abprop.utils.liabilities
   - nglyc
   - deamidation
   - isomerization
   - oxidation
-  - cysteine_pairs
-  - length
+  - free_cysteines
 parquet:
   output_dir: oas_real_full
   filename: oas_sequences.parquet

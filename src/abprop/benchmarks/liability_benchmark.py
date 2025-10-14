@@ -14,6 +14,7 @@ from torch.utils.data import DataLoader
 
 from abprop.data import OASDataset, build_collate_fn
 from abprop.eval.metrics import regression_per_key, regression_summary
+from abprop.utils.liabilities import CANONICAL_LIABILITY_KEYS
 
 from .registry import Benchmark, BenchmarkConfig, BenchmarkResult, register_benchmark
 
@@ -27,8 +28,7 @@ class LiabilityBenchmark(Benchmark):
     - Deamidation sites
     - Isomerization sites
     - Oxidation sites
-    - Cysteine pairs
-    - Sequence length
+    - Free cysteines
 
     Provides:
     - Regression metrics (MSE, R², Spearman) per liability
@@ -44,14 +44,7 @@ class LiabilityBenchmark(Benchmark):
         """
         super().__init__(config)
         # Default liability keys - can be overridden
-        self.liability_keys = [
-            "nglyc",
-            "deamidation",
-            "isomerization",
-            "oxidation",
-            "cysteine_pairs",
-            "length",
-        ]
+        self.liability_keys = list(CANONICAL_LIABILITY_KEYS)
 
     def load_data(self) -> DataLoader:
         """Load antibody sequences with liability annotations.

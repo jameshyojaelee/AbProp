@@ -14,6 +14,7 @@ import torch
 from torch.utils.data import DataLoader
 
 from abprop.data import OASDataset, build_collate_fn
+from abprop.utils.liabilities import CANONICAL_LIABILITY_KEYS
 
 from .registry import Benchmark, BenchmarkConfig, BenchmarkResult, register_benchmark
 
@@ -122,7 +123,7 @@ class DevelopabilityBenchmark(Benchmark):
         if hasattr(model, "config") and hasattr(model.config, "liability_keys"):
             liability_keys = list(model.config.liability_keys)
         else:
-            liability_keys = ["nglyc", "deamidation", "isomerization", "oxidation", "cysteine_pairs", "length"]
+            liability_keys = list(CANONICAL_LIABILITY_KEYS)
 
         n_samples = 0
 

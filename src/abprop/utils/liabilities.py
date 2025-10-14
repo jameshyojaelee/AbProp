@@ -3,7 +3,15 @@
 from __future__ import annotations
 
 import re
-from typing import Dict, Mapping
+from typing import Dict, Mapping, Tuple
+
+CANONICAL_LIABILITY_KEYS: Tuple[str, ...] = (
+    "nglyc",
+    "deamidation",
+    "isomerization",
+    "oxidation",
+    "free_cysteines",
+)
 
 DEFAULT_PATTERNS = {
     "nglyc": r"N[^P][ST]",  # N-X-S/T with proline exclusion
@@ -61,21 +69,24 @@ def find_motifs(sequence: str, extra_patterns: Mapping[str, str] | None = None) 
         extra_patterns: Optional mapping of {name: regex} for additional motif detection.
     """
     sequence = sequence.upper()
-    counts: Dict[str, int] = {}
+    base_counts: Dict[str, int] = {}
 
     for name, pattern in DEFAULT_PATTERNS.items():
         if name == "oxidation":
-            counts[name] = sequence.count("M")
+            base_counts[name] = sequence.count("M")
         else:
-            counts[name] = _count_overlapping(pattern, sequence)
+            base_counts[name] = _count_overlapping(pattern, sequence)
 
-    counts["free_cysteines"] = _estimate_free_cysteines(sequence)
+    base_counts["free_cysteines"] = _estimate_free_cysteines(sequence)
 
+    extra_counts: Dict[str, int] = {}
     if extra_patterns:
         for name, pattern in extra_patterns.items():
-            counts[name] = _count_overlapping(pattern, sequence)
+            extra_counts[name] = _count_overlapping(pattern, sequence)
 
-    return counts
+    ordered = {key: base_counts.get(key, 0) for key in CANONICAL_LIABILITY_KEYS}
+    ordered.update(extra_counts)
+    return ordered
 
 
 def normalize_by_length(counts: Mapping[str, int], length: int) -> Dict[str, float]:
@@ -85,4 +96,4 @@ def normalize_by_length(counts: Mapping[str, int], length: int) -> Dict[str, flo
     return {key: value / length for key, value in counts.items()}
 
 
-__all__ = ["find_motifs", "normalize_by_length"]
+__all__ = ["CANONICAL_LIABILITY_KEYS", "find_motifs", "normalize_by_length"]
