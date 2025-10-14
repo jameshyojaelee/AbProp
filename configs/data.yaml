@@ -1,4 +1,8 @@
 # Default data configuration for AbProp ETL and training.
+# Processed parquet exports should live under `processed_dir` using a layout like:
+#   data/processed/
+#     oas_real_full/
+#       oas_sequences.parquet  # partitioned directory or flat parquet file
 raw_dir: ./data/raw
 interim_dir: ./data/interim
 processed_dir: ./data/processed
@@ -14,5 +18,6 @@ liability_features:
   - cysteine_pairs
   - length
 parquet:
+  output_dir: oas_real_full
   filename: oas_sequences.parquet
   partition_on: ["species", "chain", "split"]

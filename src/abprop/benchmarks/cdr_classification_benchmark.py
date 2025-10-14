@@ -88,6 +88,8 @@ class CDRClassificationBenchmark(Benchmark):
 
                 token_labels = token_labels.to(device)
 
+                chains_meta = batch.get("chains")
+
                 # Forward pass
                 outputs = model(
                     input_ids,
@@ -120,7 +122,10 @@ class CDRClassificationBenchmark(Benchmark):
                     position_total[:seq_len] += 1
 
                     # Per-chain metrics
-                    chain = batch.get("chain_type", ["unknown"] * input_ids.size(0))[seq_idx]
+                    chain_value = None
+                    if chains_meta is not None and seq_idx < len(chains_meta):
+                        chain_value = chains_meta[seq_idx]
+                    chain = chain_value if chain_value else "unknown"
                     chain_mask = seq_mask[:seq_len]
                     chain_preds = seq_preds[:seq_len]
                     chain_labels = seq_labels[:seq_len]

@@ -88,6 +88,9 @@ class PerplexityBenchmark(Benchmark):
 
                 mlm_labels = mlm_labels.to(device)
 
+                chains_meta = batch.get("chains")
+                species_meta = batch.get("species")
+
                 # Forward pass
                 outputs = model(
                     input_ids,
@@ -125,8 +128,15 @@ class PerplexityBenchmark(Benchmark):
                     overall_tokens += seq_tokens
 
                     # Get metadata
-                    chain = batch.get("chain_type", ["unknown"] * input_ids.size(0))[idx]
-                    species = batch.get("species", ["unknown"] * input_ids.size(0))[idx]
+                    chain_value = None
+                    if chains_meta is not None and idx < len(chains_meta):
+                        chain_value = chains_meta[idx]
+                    chain = chain_value if chain_value else "unknown"
+
+                    species_value = None
+                    if species_meta is not None and idx < len(species_meta):
+                        species_value = species_meta[idx]
+                    species = species_value if species_value else "unknown"
                     seq_len = attention_mask[idx].sum().item()
 
                     # Stratify by chain

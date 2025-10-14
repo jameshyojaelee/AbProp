@@ -1,0 +1,8 @@
+output_dir: ./outputs/benchmarks_tmp
+batch_size: 8
+device: cpu
+mlflow_tracking: false
+perplexity:
+  data_path: ./data/processed/oas_real_full
+  batch_size: 8
+  max_samples: 8

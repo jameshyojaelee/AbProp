@@ -120,6 +120,9 @@ class ZeroShotBenchmark(Benchmark):
                 )
 
                 # Process MLM results by species/germline
+                species_meta = batch.get("species")
+                germline_meta = batch.get("germline_v") or batch.get("v_gene")
+
                 if mlm_labels is not None and "mlm" in tasks:
                     logits = outputs["mlm_logits"]
                     mask = mlm_labels != -100
@@ -141,8 +144,15 @@ class ZeroShotBenchmark(Benchmark):
                         ).item()
 
                         # Get metadata
-                        species = batch.get("species", ["unknown"] * input_ids.size(0))[idx]
-                        germline = batch.get("v_gene", ["unknown"] * input_ids.size(0))[idx]
+                        species_value = None
+                        if species_meta is not None and idx < len(species_meta):
+                            species_value = species_meta[idx]
+                        species = species_value if species_value else "unknown"
+
+                        germline_value = None
+                        if germline_meta is not None and idx < len(germline_meta):
+                            germline_value = germline_meta[idx]
+                        germline = germline_value if germline_value else "unknown"
 
                         # Stratify by species
                         by_species[species]["loss"] += seq_loss
@@ -165,7 +175,10 @@ class ZeroShotBenchmark(Benchmark):
                     ).detach().cpu()
 
                     for idx in range(input_ids.size(0)):
-                        species = batch.get("species", ["unknown"] * input_ids.size(0))[idx]
+                        species_value = None
+                        if species_meta is not None and idx < len(species_meta):
+                            species_value = species_meta[idx]
+                        species = species_value if species_value else "unknown"
                         liability_by_species[species]["predictions"].append(preds[idx])
                         liability_by_species[species]["targets"].append(target_tensor[idx])
 

@@ -52,6 +52,12 @@ def _maybe_to_list(value: object) -> Optional[List[int]]:
     return None
 
 
+def _normalize_optional(value: object) -> object:
+    if isinstance(value, float) and math.isnan(value):
+        return None
+    return value
+
+
 class OASDataset(Dataset):
     """Lightweight dataset backed by partitioned Parquet files."""
 
@@ -71,8 +77,8 @@ class OASDataset(Dataset):
                 pass
 
         default_columns = {"sequence", "chain", "liability_ln", "length"}
-        if "cdr_mask" in available_columns:
-            default_columns.add("cdr_mask")
+        metadata_columns = {"species", "germline_v", "germline_j", "cdr_mask"}
+        default_columns.update(metadata_columns & available_columns)
 
         self.columns = set(columns or default_columns)
         required = {"sequence", "chain", "liability_ln", "length"}
@@ -87,7 +93,10 @@ class OASDataset(Dataset):
             if missing_optional:
                 self.columns -= missing_optional
 
-        read_columns = list(self.columns | {"split"})
+        if columns is None:
+            read_columns = None
+        else:
+            read_columns = list(self.columns | {"split"})
         df = pd.read_parquet(
             self.parquet_dir,
             columns=read_columns,
@@ -103,6 +112,19 @@ class OASDataset(Dataset):
         self.frame = df.reset_index(drop=True)
         self.lengths = self.frame["length"].astype(int).tolist()
         self.has_cdr = "cdr_mask" in self.frame.columns
+        self._optional_fields = [
+            column
+            for column in self.frame.columns
+            if column
+            not in {
+                "sequence",
+                "chain",
+                "liability_ln",
+                "length",
+                "cdr_mask",
+                "split",
+            }
+        ]
 
     def __len__(self) -> int:
         return len(self.frame)
@@ -114,10 +136,17 @@ class OASDataset(Dataset):
             "chain": row["chain"],
             "liability_ln": row["liability_ln"],
             "length": int(row["length"]),
+            "species": _normalize_optional(row.get("species")),
+            "germline_v": _normalize_optional(row.get("germline_v")),
+            "germline_j": _normalize_optional(row.get("germline_j")),
         }
         if self.has_cdr:
             cdr_mask = row["cdr_mask"]
             item["cdr_mask"] = cdr_mask
+        for column in self._optional_fields:
+            if column in item:
+                continue
+            item[column] = _normalize_optional(row[column])
         return item
 
 
@@ -229,7 +258,21 @@ def build_collate_fn(
             "attention_mask": attention_mask,
             "chains": [example["chain"] for example in examples],
             "liability_ln": [example["liability_ln"] for example in examples],
+            "lengths": [int(example.get("length", 0) or 0) for example in examples],
         }
+        optional_keys = set().union(*(example.keys() for example in examples))
+        reserved_keys = {
+            "sequence",
+            "chain",
+            "liability_ln",
+            "cdr_mask",
+            "length",
+        }
+        for key in sorted(optional_keys - reserved_keys):
+            values = [example.get(key) for example in examples]
+            if any(value is not None for value in values):
+                result[key] = values
+
         cdr_values = [example.get("cdr_mask") for example in examples]
         if any(value is not None for value in cdr_values):
             token_labels = torch.full_like(input_ids, fill_value=-100)

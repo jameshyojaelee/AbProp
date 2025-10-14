@@ -114,20 +114,26 @@ def build_oas_dataloaders(
     distributed: bool,
     rank: int,
     world_size: int,
-) -> Optional[tuple[DataLoader, Optional[DataLoader]]]:
+) -> tuple[DataLoader, Optional[DataLoader]]:
     processed_root = Path(data_cfg.get("processed_dir", "data/processed"))
     parquet_cfg = data_cfg.get("parquet", {})
-    parquet_subdir = parquet_cfg.get("output_dir", "oas")
-    parquet_dir = processed_root / parquet_subdir
-    if not parquet_dir.exists():
-        print(f"Processed dataset not found at {parquet_dir}.")
-        return None
+    parquet_subdir = parquet_cfg.get("output_dir")
+    dataset_root = processed_root / parquet_subdir if parquet_subdir else processed_root
+    if not dataset_root.exists():
+        raise FileNotFoundError(
+            f"Processed dataset directory not found at {dataset_root}. "
+            "Update `configs/data.yaml` (parquet.output_dir) to point to a valid export."
+        )
 
-    try:
-        train_dataset = OASDataset(parquet_dir, split="train")
-    except Exception as exc:
-        print(f"Failed to load OAS dataset: {exc}")
-        return None
+    parquet_filename = parquet_cfg.get("filename")
+    dataset_source = dataset_root / parquet_filename if parquet_filename else dataset_root
+    if not dataset_source.exists():
+        raise FileNotFoundError(
+            f"Processed dataset not found at {dataset_source}. "
+            "Ensure the parquet filename in `configs/data.yaml` matches the export."
+        )
+
+    train_dataset = OASDataset(dataset_source, split="train")
 
     collate = build_collate_fn(generate_mlm=True, mlm_probability=0.15)
     if distributed:
@@ -158,8 +164,13 @@ def build_oas_dataloaders(
         )
 
     eval_loader: Optional[DataLoader] = None
+    val_count = 0
     try:
-        val_dataset = OASDataset(parquet_dir, split="val")
+        val_dataset = OASDataset(dataset_source, split="val")
+    except ValueError:
+        if rank == 0:
+            print(f"No validation split found in dataset at {dataset_source}; continuing without validation loader.")
+    else:
         if distributed:
             val_sampler = DistributedSampler(val_dataset, num_replicas=world_size, rank=rank, shuffle=False)
             eval_loader = DataLoader(
@@ -186,8 +197,15 @@ def build_oas_dataloaders(
                 num_workers=num_workers,
                 pin_memory=torch.cuda.is_available(),
             )
-    except Exception:
-        eval_loader = None
+        val_count = len(val_dataset)
+
+    if rank == 0:
+        train_count = len(train_dataset)
+        location_hint = dataset_root if dataset_root.exists() else dataset_source
+        print(
+            f"Using processed dataset at {location_hint} "
+            f"(train={train_count}, val={val_count})"
+        )
 
     return train_loader, eval_loader
 
@@ -270,32 +288,22 @@ def main(argv: list[str] | None = None) -> None:
         )
         max_steps = args.dry_run_steps if args.dry_run_steps > 0 else train_cfg.get("max_steps", 100)
     else:
-        loaders = build_oas_dataloaders(
-            data_cfg,
-            batch_size=batch_size,
-            model_config=model_config,
-            max_tokens=max_tokens,
-            shuffle=True,
-            num_workers=num_workers,
-            distributed=dist_info["is_distributed"],
-            rank=rank,
-            world_size=world_size,
-        )
-        if loaders is None:
-            if rank == 0:
-                print("Falling back to synthetic dataset training.")
-            synthetic_samples = int(train_cfg.get("synthetic_samples", 256))
-            train_loader, eval_loader = build_synthetic_dataloaders(
-                model_config,
-                batch_size,
-                synthetic_samples,
+        try:
+            train_loader, eval_loader = build_oas_dataloaders(
+                data_cfg,
+                batch_size=batch_size,
+                model_config=model_config,
+                max_tokens=max_tokens,
+                shuffle=True,
+                num_workers=num_workers,
                 distributed=dist_info["is_distributed"],
                 rank=rank,
                 world_size=world_size,
             )
-            synthetic_mode = True
-        else:
-            train_loader, eval_loader = loaders
+        except FileNotFoundError as exc:
+            if rank == 0:
+                print(exc)
+            raise
         max_steps = train_cfg.get("max_steps", 1000)
 
     tasks = tuple(
@@ -348,4 +356,3 @@ def main(argv: list[str] | None = None) -> None:
 
 
 __all__ = ["main", "build_parser"]
-
