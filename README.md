@@ -16,7 +16,7 @@ On local machines you can still use a virtualenv:
 python -m venv .venv
 source .venv/bin/activate
 pip install --upgrade pip
-pip install -e '.[dev,serve]'
+pip install -e '.[dev,serve,bench]'
 ```
 
 On the cluster, follow the HPC setup below for module loads and conda-based installs.
@@ -103,7 +103,7 @@ module load Miniconda3/23.10.0-1
 conda create -p $HOME/.conda/abprop python=3.10 -y
 conda activate $HOME/.conda/abprop
 python -m pip install --upgrade pip
-pip install -e '.[dev,serve]'
+pip install -e '.[dev,serve,bench]'
 ```
 
 > **Container note**: If you prefer containers, build an image with the same dependency set (PyTorch 2.1.2 + CUDA 12.3 + NCCL) and mount the project root plus `./data`/`./outputs` directories into the container.

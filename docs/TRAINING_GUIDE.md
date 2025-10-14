@@ -22,9 +22,9 @@ conda activate $HOME/.conda/abprop
 # Install PyTorch with CUDA support
 conda install pytorch=2.1.2 pytorch-cuda=12.1 -c pytorch -c nvidia
 
-# Install AbProp in development mode
+# Install AbProp in development mode (includes benchmarking extras)
 cd /path/to/AbProp
-pip install -e '.[dev]'
+pip install -e '.[dev,bench]'
 ```
 
 **Option B: Using Virtual Environment**
@@ -34,7 +34,7 @@ python -m venv .venv
 source .venv/bin/activate
 pip install --upgrade pip
 pip install torch==2.1.2
-pip install -e '.[dev]'
+pip install -e '.[dev,bench]'
 ```
 
 ### 2. Verify Installation
