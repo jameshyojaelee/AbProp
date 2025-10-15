@@ -2,9 +2,11 @@
 
 from __future__ import annotations
 
-from typing import Dict, Iterable, Sequence
+from typing import Callable, Dict, Iterable, Sequence, Tuple
 
+import numpy as np
 import torch
+from scipy import stats
 
 
 def compute_perplexity(total_loss: float, token_count: int) -> float:
@@ -104,5 +106,135 @@ __all__ = [
     "classification_summary",
     "regression_summary",
     "regression_per_key",
+    "calibration_curve",
+    "expected_calibration_error",
+    "maximum_calibration_error",
+    "kl_divergence",
+    "wasserstein_1d",
+    "kendall_tau",
+    "bootstrap_confidence_interval",
 ]
 
+
+def calibration_curve(
+    probabilities: torch.Tensor,
+    targets: torch.Tensor,
+    num_bins: int = 15,
+) -> Dict[str, torch.Tensor]:
+    """Return calibration statistics for binary probabilities.
+
+    Args:
+        probabilities: Tensor of predicted probabilities for the positive class.
+        targets: Tensor of 0/1 ground truth labels.
+        num_bins: Number of bins for calibration.
+
+    Returns:
+        Dictionary containing bin accuracies, confidences, counts, ECE, and MCE.
+    """
+
+    probs = probabilities.detach().flatten().float()
+    labels = targets.detach().flatten().float()
+    probs = probs.clamp(0.0, 1.0)
+    labels = labels.clamp(0.0, 1.0)
+
+    bins = torch.linspace(0.0, 1.0, num_bins + 1, device=probs.device)
+    bin_indices = torch.bucketize(probs, bins, right=True) - 1
+    bin_indices = bin_indices.clamp(0, num_bins - 1)
+
+    bin_confidence = torch.zeros(num_bins, dtype=torch.float32, device=probs.device)
+    bin_accuracy = torch.zeros_like(bin_confidence)
+    bin_counts = torch.zeros_like(bin_confidence)
+
+    for b in range(num_bins):
+        mask = bin_indices == b
+        if mask.any():
+            bin_probs = probs[mask]
+            bin_labels = labels[mask]
+            bin_confidence[b] = bin_probs.mean()
+            bin_accuracy[b] = bin_labels.mean()
+            bin_counts[b] = mask.sum().float()
+
+    total = bin_counts.sum().clamp_min(1.0)
+    abs_diff = (bin_accuracy - bin_confidence).abs()
+    ece = (abs_diff * bin_counts / total).sum()
+    mce = abs_diff.max()
+
+    return {
+        "bin_accuracy": bin_accuracy.cpu(),
+        "bin_confidence": bin_confidence.cpu(),
+        "bin_counts": bin_counts.cpu(),
+        "ece": float(ece.cpu()),
+        "mce": float(mce.cpu()),
+        "bin_edges": bins.cpu(),
+    }
+
+
+def expected_calibration_error(probabilities: torch.Tensor, targets: torch.Tensor, num_bins: int = 15) -> float:
+    """Convenience wrapper returning the expected calibration error."""
+
+    return calibration_curve(probabilities, targets, num_bins)["ece"]
+
+
+def maximum_calibration_error(probabilities: torch.Tensor, targets: torch.Tensor, num_bins: int = 15) -> float:
+    """Return maximum calibration error across bins."""
+
+    return calibration_curve(probabilities, targets, num_bins)["mce"]
+
+
+def kl_divergence(p: torch.Tensor, q: torch.Tensor, epsilon: float = 1e-8) -> float:
+    """Compute KL divergence KL(p || q) for discrete distributions."""
+
+    p = p.float().view(-1)
+    q = q.float().view(-1)
+    p = p / p.sum().clamp_min(epsilon)
+    q = q / q.sum().clamp_min(epsilon)
+    divergence = (p * (torch.log(p + epsilon) - torch.log(q + epsilon))).sum()
+    return float(divergence.cpu())
+
+
+def wasserstein_1d(p: torch.Tensor, q: torch.Tensor) -> float:
+    """Compute the 1D Wasserstein distance between two samples."""
+
+    return float(stats.wasserstein_distance(p.view(-1).cpu().numpy(), q.view(-1).cpu().numpy()))
+
+
+def kendall_tau(predictions: torch.Tensor, targets: torch.Tensor) -> float:
+    """Compute Kendall's Tau rank correlation."""
+
+    preds = predictions.view(-1).detach().cpu().numpy()
+    targs = targets.view(-1).detach().cpu().numpy()
+    if preds.size == 0:
+        return 0.0
+    tau, _ = stats.kendalltau(preds, targs)
+    if np.isnan(tau):
+        return 0.0
+    return float(tau)
+
+
+def bootstrap_confidence_interval(
+    values: torch.Tensor,
+    statistic: Callable[[torch.Tensor], torch.Tensor | float],
+    confidence: float = 0.95,
+    num_bootstrap: int = 500,
+    seed: int = 0,
+) -> Tuple[float, float]:
+    """Bootstrap confidence interval for a statistic over 1-D tensor."""
+
+    rng = torch.Generator(device=values.device)
+    rng.manual_seed(seed)
+    values = values.flatten()
+    n = values.numel()
+    if n == 0:
+        return (0.0, 0.0)
+
+    stats_samples = []
+    for _ in range(num_bootstrap):
+        indices = torch.randint(0, n, (n,), generator=rng, device=values.device)
+        sample = values[indices]
+        stat_val = statistic(sample)
+        stats_samples.append(float(stat_val))
+
+    stats_array = torch.tensor(stats_samples)
+    lower = float(torch.quantile(stats_array, (1 - confidence) / 2))
+    upper = float(torch.quantile(stats_array, 1 - (1 - confidence) / 2))
+    return lower, upper
