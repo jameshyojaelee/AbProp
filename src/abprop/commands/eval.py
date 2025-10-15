@@ -17,6 +17,14 @@ from abprop.eval.metrics import (
     regression_per_key,
     regression_summary,
 )
+from abprop.eval.uncertainty import (
+    TemperatureScaler,
+    expected_calibration_error,
+    mean_variance,
+    regression_uncertainty_summary,
+    sequence_perplexity_from_logits,
+    stack_samples,
+)
 from abprop.models import AbPropModel, TransformerConfig
 from abprop.utils import (
     load_yaml_config,
@@ -40,6 +48,31 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--device", type=str, default="cuda" if torch.cuda.is_available() else "cpu")
     parser.add_argument("--seed", type=int, default=42)
     parser.add_argument("--max-tokens", type=int, default=None)
+    parser.add_argument("--uncertainty", action="store_true", help="Enable uncertainty estimation outputs.")
+    parser.add_argument(
+        "--mc-samples",
+        type=int,
+        default=20,
+        help="Number of Monte Carlo dropout samples per batch when uncertainty is enabled.",
+    )
+    parser.add_argument(
+        "--ensemble-checkpoints",
+        nargs="*",
+        type=Path,
+        default=None,
+        help="Optional additional checkpoints for deep ensemble aggregation.",
+    )
+    parser.add_argument(
+        "--temperature-calibration",
+        action="store_true",
+        help="Fit a temperature scaler for classification logits when uncertainty is enabled.",
+    )
+    parser.add_argument(
+        "--calibration-max-iter",
+        type=int,
+        default=50,
+        help="Maximum LBFGS iterations for temperature calibration.",
+    )
     return parser
 
 
@@ -178,7 +211,8 @@ def save_confusion_matrix(matrix: Dict[str, int], output_path: Path) -> None:
         ],
         dtype=torch.float32,
     )
-    im = ax.imshow(cm, cmap="Blues")
+    cm_np = cm.cpu().numpy()
+    im = ax.imshow(cm_np, cmap="Blues")
     ax.set_xlabel("Predicted")
     ax.set_ylabel("Actual")
     ax.set_xticks([0, 1])
@@ -187,7 +221,7 @@ def save_confusion_matrix(matrix: Dict[str, int], output_path: Path) -> None:
     ax.set_yticklabels(["Framework", "CDR"])
     for i in range(2):
         for j in range(2):
-            ax.text(j, i, f"{int(cm[i, j])}", ha="center", va="center", color="black")
+            ax.text(j, i, f"{int(cm_np[i, j])}", ha="center", va="center", color="black")
     fig.colorbar(im, ax=ax, fraction=0.046, pad=0.04)
     fig.tight_layout()
     fig.savefig(output_path)
@@ -218,6 +252,176 @@ def save_regression_scatter(
         fig.tight_layout()
         fig.savefig(output_dir / f"scatter_{key}.png")
         plt.close(fig)
+
+
+def compute_uncertainty_metrics(
+    model: AbPropModel,
+    dataloader: DataLoader,
+    device: torch.device,
+    tasks: Sequence[str],
+    liability_keys: Sequence[str],
+    *,
+    mc_samples: int,
+    ensemble_models: Optional[Sequence[AbPropModel]] = None,
+    pad_token_id: int = 0,
+    temperature_calibration: bool = False,
+    calibration_max_iter: int = 50,
+) -> Dict[str, Dict]:
+    """Run Monte Carlo dropout / ensembles to produce uncertainty-aware reports."""
+    if mc_samples <= 0:
+        raise ValueError("mc_samples must be positive when uncertainty evaluation is enabled.")
+
+    model.eval()
+    additional_models = list(ensemble_models or [])
+    for ens_model in additional_models:
+        ens_model.to(device)
+        ens_model.eval()
+
+    regression_means: List[torch.Tensor] = []
+    regression_vars: List[torch.Tensor] = []
+    regression_targets: List[torch.Tensor] = []
+    perplexity_means: List[torch.Tensor] = []
+    perplexity_vars: List[torch.Tensor] = []
+    cls_logits: List[torch.Tensor] = []
+    cls_labels: List[torch.Tensor] = []
+
+    with torch.no_grad():
+        for batch in dataloader:
+            input_ids = batch["input_ids"].to(device)
+            attention_mask = batch["attention_mask"].to(device)
+
+            if "reg" in tasks:
+                liability_targets = batch.get("liability_ln")
+                target_tensor = model._prepare_regression_targets(  # type: ignore[attr-defined]
+                    liability_targets,
+                    batch_size=input_ids.size(0),
+                    device=device,
+                )
+                if target_tensor is not None:
+                    regression_targets.append(target_tensor.detach().cpu())
+
+                    mc_outputs = model.stochastic_forward(
+                        input_ids,
+                        attention_mask,
+                        tasks=("reg",),
+                        mc_samples=mc_samples,
+                        enable_dropout=True,
+                        no_grad=True,
+                    )
+                    sample_list = [out["regression"].detach().cpu() for out in mc_outputs]
+
+                    for ens_model in additional_models:
+                        ens_out = ens_model(
+                            input_ids,
+                            attention_mask,
+                            tasks=("reg",),
+                        )
+                        sample_list.append(ens_out["regression"].detach().cpu())
+
+                    stats = mean_variance(stack_samples(sample_list))
+                    regression_means.append(stats.mean)
+                    regression_vars.append(stats.variance)
+
+            if "mlm" in tasks:
+                mc_outputs = model.stochastic_forward(
+                    input_ids,
+                    attention_mask,
+                    tasks=("mlm",),
+                    mc_samples=mc_samples,
+                    enable_dropout=True,
+                    no_grad=True,
+                )
+                sample_perplexities = [
+                    sequence_perplexity_from_logits(out["mlm_logits"].detach(), input_ids, pad_token_id=pad_token_id).cpu()
+                    for out in mc_outputs
+                ]
+                for ens_model in additional_models:
+                    ens_out = ens_model(
+                        input_ids,
+                        attention_mask,
+                        tasks=("mlm",),
+                    )
+                    sample_perplexities.append(
+                        sequence_perplexity_from_logits(
+                            ens_out["mlm_logits"].detach(),
+                            input_ids,
+                            pad_token_id=pad_token_id,
+                        ).cpu()
+                    )
+                stats = mean_variance(stack_samples(sample_perplexities))
+                perplexity_means.append(stats.mean)
+                perplexity_vars.append(stats.variance)
+
+            if temperature_calibration and "cls" in tasks:
+                token_labels = batch.get("token_labels")
+                if token_labels is not None:
+                    if isinstance(token_labels, torch.Tensor):
+                        token_labels = token_labels.to(device)
+                    else:
+                        token_labels = token_labels
+                    outputs = model(
+                        input_ids,
+                        attention_mask,
+                        token_labels=token_labels,  # type: ignore[arg-type]
+                        tasks=("cls",),
+                    )
+                    cls_logits.append(
+                        outputs["cls_logits"].detach().reshape(-1, outputs["cls_logits"].size(-1)).cpu()
+                    )
+                    cls_labels.append(model._prepare_token_labels(  # type: ignore[attr-defined]
+                        token_labels,
+                        attention_mask,
+                        device=device,
+                    ).reshape(-1).detach().cpu())
+
+    report: Dict[str, Dict] = {}
+
+    if regression_means:
+        mean_tensor = torch.cat(regression_means, dim=0)
+        var_tensor = torch.cat(regression_vars, dim=0)
+        target_tensor = torch.cat(regression_targets, dim=0)
+        regression_report = regression_uncertainty_summary(mean_tensor, var_tensor, target_tensor)
+        per_key: Dict[str, Dict] = {}
+        for idx, key in enumerate(liability_keys):
+            per_key[key] = regression_uncertainty_summary(
+                mean_tensor[:, idx],
+                var_tensor[:, idx],
+                target_tensor[:, idx],
+            )
+        regression_report["per_key"] = per_key
+        report["regression"] = regression_report
+
+    if perplexity_means:
+        mean_tensor = torch.cat(perplexity_means, dim=0)
+        var_tensor = torch.cat(perplexity_vars, dim=0)
+        report["perplexity"] = {
+            "mean_perplexity": float(mean_tensor.mean().item()),
+            "variance_mean": float(var_tensor.mean().item()),
+            "variance_median": float(var_tensor.flatten().median().item()),
+        }
+
+    if temperature_calibration and cls_logits:
+        logits_tensor = torch.cat(cls_logits, dim=0)
+        labels_tensor = torch.cat(cls_labels, dim=0)
+        scaler = TemperatureScaler()
+        temperature = scaler.fit(
+            logits_tensor,
+            labels_tensor,
+            ignore_index=-100,
+            max_iter=calibration_max_iter,
+        )
+        with torch.no_grad():
+            probs_before = torch.softmax(logits_tensor, dim=-1)
+            probs_after = torch.softmax(scaler(logits_tensor), dim=-1)
+        ece_before = expected_calibration_error(probs_before, labels_tensor)
+        ece_after = expected_calibration_error(probs_after, labels_tensor)
+        report["classification"] = {
+            "temperature": float(temperature),
+            "ece_before": ece_before,
+            "ece_after": ece_after,
+        }
+
+    return report
 
 
 def collect_regression_tensors(
@@ -271,6 +475,16 @@ def main(argv: list[str] | None = None) -> None:
     model.to(device)
     load_checkpoint(model, args.checkpoint, device)
 
+    ensemble_models: List[AbPropModel] = []
+    if args.ensemble_checkpoints:
+        for ckpt_path in args.ensemble_checkpoints:
+            if ckpt_path == args.checkpoint:
+                continue
+            ens_model, _ = instantiate_model(model_cfg)
+            ens_model.to(device)
+            load_checkpoint(ens_model, ckpt_path, device)
+            ensemble_models.append(ens_model)
+
     processed_root = Path(data_cfg.get("processed_dir", "data/processed"))
     parquet_cfg = data_cfg.get("parquet", {})
     parquet_subdir = parquet_cfg.get("output_dir", "oas")
@@ -291,6 +505,22 @@ def main(argv: list[str] | None = None) -> None:
         for split in args.splits:
             dataloader = build_dataloader(parquet_dir, split, args.batch_size, args.max_tokens)
             report = evaluate_split(model, dataloader, device, model_config.liability_keys, tasks)
+
+            if args.uncertainty:
+                uncertainty_report = compute_uncertainty_metrics(
+                    model,
+                    dataloader,
+                    device,
+                    tasks,
+                    model_config.liability_keys,
+                    mc_samples=args.mc_samples,
+                    ensemble_models=ensemble_models,
+                    temperature_calibration=args.temperature_calibration,
+                    calibration_max_iter=args.calibration_max_iter,
+                )
+                if uncertainty_report:
+                    report["uncertainty"] = uncertainty_report
+
             summary[split] = report
 
             split_dir = output_root / split
@@ -301,6 +531,12 @@ def main(argv: list[str] | None = None) -> None:
 
             mlflow_log_dict(report, f"{split}/metrics.json")
 
+            if args.uncertainty and "uncertainty" in report:
+                uncertainty_path = split_dir / "uncertainty.json"
+                with open(uncertainty_path, "w", encoding="utf-8") as handle:
+                    json.dump(report["uncertainty"], handle, indent=2)
+                mlflow_log_dict(report["uncertainty"], f"{split}/uncertainty.json")
+
             if "classification" in report and "confusion_matrix" in report["classification"]:
                 cm_path = split_dir / "confusion_matrix.png"
                 save_confusion_matrix(report["classification"]["confusion_matrix"], cm_path)
@@ -309,7 +545,10 @@ def main(argv: list[str] | None = None) -> None:
             if "regression" in report:
                 preds, targets = collect_regression_tensors(model, dataloader, device, tasks)
                 if preds is not None and targets is not None:
-                    save_regression_scatter(preds, targets, model_config.liability_keys, split_dir)
+                    try:
+                        save_regression_scatter(preds, targets, model_config.liability_keys, split_dir)
+                    except Exception as err:  # pragma: no cover - logging safeguard
+                        print(f"[warn] unable to write regression scatter plots: {err}")
                     for key in model_config.liability_keys:
                         fig_path = split_dir / f"scatter_{key}.png"
                         if fig_path.exists():

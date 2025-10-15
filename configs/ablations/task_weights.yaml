@@ -1,0 +1,41 @@
+experiments:
+  - name: task_balanced
+    description: "Reinforce balanced multi-task weighting (reference)."
+    train_overrides:
+      task_weights:
+        mlm: 1.0
+        cls: 1.0
+        reg: 1.0
+    tags:
+      axis: task_weights
+      variant: balanced
+  - name: task_regression_focus
+    description: "Increase regression emphasis to improve liability predictions."
+    train_overrides:
+      task_weights:
+        mlm: 0.5
+        cls: 0.5
+        reg: 2.0
+    model_overrides:
+      task_weights:
+        mlm: 0.5
+        cls: 0.5
+        reg: 2.0
+    tags:
+      axis: task_weights
+      variant: regression_focus
+  - name: task_generation_focus
+    description: "Prioritise MLM to improve language modelling quality."
+    train_overrides:
+      task_weights:
+        mlm: 2.0
+        cls: 0.5
+        reg: 0.5
+    model_overrides:
+      task_weights:
+        mlm: 2.0
+        cls: 0.5
+        reg: 0.5
+    tags:
+      axis: task_weights
+      variant: mlm_focus

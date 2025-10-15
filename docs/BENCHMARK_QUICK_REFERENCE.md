@@ -123,6 +123,15 @@ python scripts/run_benchmarks.py --checkpoint path/to/checkpoint.pt --all --no-m
 
 ---
 
+## ESM-2 Baseline
+- Install `fair-esm` (GPU build recommended): `pip install fair-esm` and ensure CUDA-capable hardware (24 GB VRAM suggested for the 650M backbone).
+- Train linear probes while freezing the backbone: `python scripts/train_esm2_probes.py --config configs/benchmarks.yaml --epochs 5`.
+- Evaluate the baseline with benchmark parity: `python scripts/eval_esm2.py --checkpoint outputs/esm2_probes/checkpoints/best.pt --all --html-report`.
+- Outputs land in `outputs/esm2_probes/` (training logs/checkpoints) and `outputs/esm2_benchmarks/` (metrics, HTML, uncertainty JSON, runtime/memory metadata).
+- Override batch size or device via CLI flags when memory constrained; fall back to CPU at the cost of runtime.
+
+---
+
 ## Common Options
 
 | Option | Description | Default |

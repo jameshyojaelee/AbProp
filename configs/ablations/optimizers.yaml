@@ -1,0 +1,33 @@
+experiments:
+  - name: opt_adamw_baseline
+    description: "AdamW with default betas."
+    train_overrides:
+      optimizer: adamw
+      adam_beta1: 0.9
+      adam_beta2: 0.999
+      learning_rate: 1.0e-4
+      weight_decay: 1.0e-2
+    tags:
+      axis: optimizer
+      variant: adamw
+  - name: opt_adam_low_beta
+    description: "AdamW with lower beta1 to react faster to gradients."
+    train_overrides:
+      optimizer: adamw
+      adam_beta1: 0.85
+      adam_beta2: 0.99
+      learning_rate: 1.2e-4
+      weight_decay: 8.0e-3
+    tags:
+      axis: optimizer
+      variant: adamw_low_beta
+  - name: opt_sgd_momentum
+    description: "Switch to SGD with momentum."
+    train_overrides:
+      optimizer: sgd
+      sgd_momentum: 0.9
+      learning_rate: 3.5e-3
+      weight_decay: 5.0e-3
+    tags:
+      axis: optimizer
+      variant: sgd_momentum

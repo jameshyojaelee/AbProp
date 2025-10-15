@@ -284,6 +284,137 @@ abprop-eval \
     --output outputs/real_data_run/eval_results.json
 ```
 
+## Attention Visualization
+
+Generate transformer attention figures to interpret predictions and share curated examples.
+
+### Quickstart
+
+```bash
+python scripts/visualize_attention.py \
+  --checkpoint outputs/real_data_run/checkpoints/best.pt \
+  --sequence examples/attention_success.fa \
+  --output outputs/attention \
+  --cdr 30-35,50-65,95-105 \
+  --liabilities 12-15 \
+  --label success \
+  --interactive
+```
+
+The script caches attention tensors (default: `outputs/attention/cache`) so repeat runs over the same checkpoint/sequence pair are instant. It writes:
+
+- `aggregated/layer_XX_mean.(png|html)` – head-averaged heatmaps per layer
+- `aggregated/rollout.(png|html)` – rollout attention across layers
+- `heads/layer_XX_heads.png` – head-by-head grids
+- `attention_summary.csv` / `metadata.json` – downstream analysis facts
+
+Use `--label` to separate success vs. failure examples (e.g. `success`, `failure`, `edge-case`). Enable interactive Plotly heatmaps with `--interactive` (install via `pip install plotly`).
+
+### Highlighting Regions
+
+Provide residue ranges to spotlight structural regions:
+
+```bash
+python scripts/visualize_attention.py \
+  --checkpoint outputs/real_data_run/checkpoints/last.pt \
+  --sequence examples/attention_failure.fa \
+  --output outputs/attention \
+  --cdr 29-38,49-64,92-104 \
+  --liabilities 55-58,83-85 \
+  --label failure
+```
+
+Ranges are 1-based residue indices (the CLI automatically offsets for `<bos>/<eos>`). Disable caching with `--no-cache` or relocate it via `--cache-dir`.
+
+## Embedding Space Exploration
+
+Use `scripts/visualize_embeddings.py` to compare checkpoints, color by metadata, and compute clustering diagnostics. Install optional dependencies with:
+
+```bash
+pip install -e '.[viz]'
+```
+
+### Example Usage
+
+```bash
+python scripts/visualize_embeddings.py \
+  --checkpoints outputs/real_data_run/checkpoints/early.pt outputs/real_data_run/checkpoints/best.pt \
+  --labels early best \
+  --parquet data/processed/oas_real_full \
+  --splits val \
+  --reducers umap pca \
+  --dimensions 2 3 \
+  --color-fields species chain germline_v liability_nglyc_bucket \
+  --pooling mean \
+  --output docs/figures/embeddings \
+  --interactive
+```
+
+The script extracts pooled embeddings, applies the requested reducers, and saves:
+
+- Per-source scatter/density plots (`docs/figures/embeddings/<reducer>_<dim>d/<label>/`)
+- Cross-checkpoint overlays (`.../comparison/`)
+- `embedding_metrics.json` summarizing silhouette and nearest-neighbor accuracy for each color field
+
+Pass `--esm2 path/to/esm_embeddings.npz` to overlay ESM-2 representations if available. Metadata automatically gains liability buckets (`*_bucket`) for quick coloring. Adjust `--pooling` (`mean`, `cls`, `last`, `max`) to explore alternative sequence summaries.
+
+## Model Registry
+
+Track checkpoints, configs, and metrics with the lightweight JSON registry.
+
+```bash
+python scripts/registry.py register \
+  --id best-val-2024-07-01 \
+  --checkpoint outputs/real_data_run/checkpoints/best.pt \
+  --config outputs/real_data_run/config_snapshot.json \
+  --metrics-file outputs/real_data_run/eval_summary.json \
+  --tags prod,ensemble
+
+python scripts/registry.py list
+python scripts/registry.py export-card --id best-val-2024-07-01 --output models/cards/best-val-2024-07-01.md
+```
+
+The registry lives at `models/registry.json` by default. Use `scripts/registry.py best --metric f1 --higher` to pick the top-performing model for deployment.
+
+## Uncertainty-Aware Evaluation & Serving
+
+### CLI Evaluation
+
+AbProp can quantify epistemic uncertainty during offline evaluation:
+
+```bash
+python scripts/eval.py \
+    --checkpoint outputs/real_data_run/checkpoints/best.pt \
+    --data-config configs/data_real.yaml \
+    --model-config configs/model.yaml \
+    --splits val test \
+    --uncertainty \
+    --mc-samples 32 \
+    --ensemble-checkpoints runs/fold_*/checkpoints/best.pt \
+    --temperature-calibration
+```
+
+**Key knobs**
+
+- `--uncertainty`: enable MC dropout + optional ensembles
+- `--mc-samples`: number of stochastic forward passes per model (default 20)
+- `--ensemble-checkpoints`: optional list of extra checkpoints for deep ensembles
+- `--temperature-calibration`: fit a scalar temperature for token-level classification
+- `--calibration-max-iter`: LBFGS iterations for temperature scaling (default 50)
+
+Outputs include `uncertainty.json` per split with coverage vs. error statistics and calibration scores.
+
+### REST API
+
+The FastAPI server now exposes uncertainty-aware endpoints:
+
+| Endpoint | Description |
+|----------|-------------|
+| `POST /score/perplexity/uncertainty` | Returns mean, variance, and standard deviation for sequence perplexity |
+| `POST /score/liabilities/uncertainty` | Returns mean, variance, and standard deviation for each liability score |
+
+Payload parameters support `mc_samples` (default 20) and `dropout` (toggle MC dropout). Responses include per-sequence statistics so downstream services can enforce risk-aware thresholds.
+
 ## Comparing Datasets
 
 To compare performance on real vs synthetic data:

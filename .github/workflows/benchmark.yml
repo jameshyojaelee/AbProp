@@ -1,0 +1,42 @@
+name: Benchmark Regression Guardrail
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "0 6 * * 1"  # weekly run (Mondays at 06:00 UTC)
+
+jobs:
+  benchmarks:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install .[bench]
+
+      - name: Run benchmarks (placeholder)
+        run: |
+          # Replace this placeholder command with real benchmark execution, e.g.:
+          # python scripts/run_benchmarks.py --config configs/benchmarks.yaml --output benchmarks/results/latest.json
+          cp benchmarks/results/baseline_example.json benchmarks/results/latest.json
+
+      - name: Check for regressions
+        run: |
+          python scripts/check_regression.py \
+            --new benchmarks/results/latest.json \
+            --reference benchmarks/results/baseline_example.json \
+            --max-drop 0.05
+
+      - name: Upload benchmark artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: benchmark-results
+          path: benchmarks/results/latest.json

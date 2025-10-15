@@ -1,0 +1,8 @@
+{
+  "runs_dir": "outputs/real_data_run",
+  "benchmarks_dir": "benchmarks/results",
+  "attention_dir": "outputs/attention",
+  "embeddings_dir": "docs/figures/embeddings",
+  "eval_dir": "outputs/evals",
+  "checkpoints_dir": "outputs/real_data_run/checkpoints"
+}

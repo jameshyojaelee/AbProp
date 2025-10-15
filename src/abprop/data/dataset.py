@@ -256,6 +256,7 @@ def build_collate_fn(
             "chains": [example["chain"] for example in examples],
             "liability_ln": [example["liability_ln"] for example in examples],
             "lengths": [int(example.get("length", 0) or 0) for example in examples],
+            "sequences": [example["sequence"] for example in examples],
         }
         optional_keys = set().union(*(example.keys() for example in examples))
         reserved_keys = {

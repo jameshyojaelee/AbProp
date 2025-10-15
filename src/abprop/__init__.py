@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from importlib import metadata
 
-from . import cli, commands, data, eval, models, tokenizers, train, utils
+from . import cli, commands, data, eval, models, tokenizers, train, utils, viz
 
 
 def __getattr__(name: str) -> str:
@@ -25,5 +25,6 @@ __all__ = [
     "tokenizers",
     "train",
     "utils",
+    "viz",
     "__version__",
 ]

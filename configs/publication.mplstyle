@@ -1,0 +1,23 @@
+# AbProp publication style
+figure.dpi: 300
+savefig.dpi: 300
+font.family: sans-serif
+font.sans-serif: Helvetica, Arial, DejaVu Sans
+axes.titlesize: 14
+axes.labelsize: 12
+axes.edgecolor: #424242
+axes.linewidth: 1.0
+axes.grid: False
+tick.labelsize: 10
+tick.direction: out
+tick.major.width: 0.8
+tick.minor.width: 0.6
+legend.fontsize: 10
+legend.frameon: False
+lines.linewidth: 2.0
+lines.markersize: 6
+patch.linewidth: 1.0
+figure.autolayout: True
+savefig.format: pdf
+savefig.bbox: tight
+savefig.pad_inches: 0.05

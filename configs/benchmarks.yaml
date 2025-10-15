@@ -7,6 +7,34 @@ batch_size: 32
 device: cuda  # or cpu
 mlflow_tracking: true
 
+baselines:
+  esm2:
+    model:
+      model_name: esm2_t33_650M_UR50D
+      repr_layer: 33
+      probe_dropout: 0.1
+      freeze_backbone: true
+      tasks: ["mlm", "cls", "reg"]
+      sequence_pooling: mean
+    training:
+      data_path: ./data/processed/oas
+      train_split: train
+      val_split: val
+      batch_size: 16
+      num_workers: 4
+      learning_rate: 1.0e-3
+      weight_decay: 0.0
+      grad_clip: 1.0
+      output_dir: ./outputs/esm2_probes
+      checkpoint_name: best.pt
+    evaluation:
+      batch_size: 32
+      device: cuda
+      runtime_tracking: true
+      memory_tracking: true
+      html_report: true
+      output_dir: ./outputs/esm2_benchmarks
+
 # Perplexity Benchmark
 # Evaluates MLM perplexity on natural antibody sequences
 perplexity:

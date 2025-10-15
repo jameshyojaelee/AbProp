@@ -50,6 +50,10 @@ class LoopConfig:
     precision: str = "amp"  # amp | fp32
     tasks: Tuple[str, ...] = ("mlm",)
     report_interval: int = 1
+    optimizer: str = "adamw"
+    adam_beta1: float = 0.9
+    adam_beta2: float = 0.999
+    sgd_momentum: float = 0.0
 
 
 class _MetricLogger:
@@ -113,11 +117,38 @@ class _NullLogger:
 
 
 def build_optimizer(model: nn.Module, config: LoopConfig) -> optim.Optimizer:
-    return optim.AdamW(
-        model.parameters(),
-        lr=config.learning_rate,
-        weight_decay=config.weight_decay,
-    )
+    optimizer_name = getattr(config, "optimizer", "adamw").lower()
+    if optimizer_name == "adamw":
+        betas = (
+            getattr(config, "adam_beta1", 0.9),
+            getattr(config, "adam_beta2", 0.999),
+        )
+        return optim.AdamW(
+            model.parameters(),
+            lr=config.learning_rate,
+            weight_decay=config.weight_decay,
+            betas=betas,
+        )
+    if optimizer_name == "adam":
+        betas = (
+            getattr(config, "adam_beta1", 0.9),
+            getattr(config, "adam_beta2", 0.999),
+        )
+        return optim.Adam(
+            model.parameters(),
+            lr=config.learning_rate,
+            weight_decay=config.weight_decay,
+            betas=betas,
+        )
+    if optimizer_name == "sgd":
+        momentum = getattr(config, "sgd_momentum", 0.0)
+        return optim.SGD(
+            model.parameters(),
+            lr=config.learning_rate,
+            momentum=momentum,
+            weight_decay=config.weight_decay,
+        )
+    raise ValueError(f"Unsupported optimizer '{config.optimizer}'.")
 
 
 def build_scheduler(optimizer: optim.Optimizer, config: LoopConfig) -> optim.lr_scheduler.LambdaLR:
@@ -150,6 +181,7 @@ class TrainLoop:
         device: Optional[torch.device] = None,
         log_run_name: str = "abprop",
         is_rank_zero_run: bool = True,
+        mlflow_tags: Optional[Mapping[str, object]] = None,
     ) -> None:
         self.model = model
         self.config = config
@@ -170,7 +202,11 @@ class TrainLoop:
             self.checkpoint_dir.mkdir(parents=True, exist_ok=True)
             self.logger = _MetricLogger(self.log_dir, run_name=log_run_name)
             self.logger.log_params({"device": str(self.device), **asdict(config)})
-            self.mlflow_run_ctx = mlflow_run(log_run_name, tags=mlflow_default_tags())
+            tags = mlflow_default_tags()
+            if mlflow_tags:
+                for key, value in mlflow_tags.items():
+                    tags[str(key)] = str(value)
+            self.mlflow_run_ctx = mlflow_run(log_run_name, tags=tags)
             self._mlflow_run = self.mlflow_run_ctx.__enter__() if self.mlflow_run_ctx else None
             mlflow_log_params({"device": str(self.device), **asdict(config)})
         else:

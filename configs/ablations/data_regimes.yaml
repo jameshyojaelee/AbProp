@@ -1,0 +1,28 @@
+experiments:
+  - name: data_fraction_25
+    description: "Train on 25% of the training set to emulate low-data regime."
+    train_overrides:
+      train_fraction: 0.25
+      val_fraction: 1.0
+      max_steps: 4000
+    tags:
+      axis: data
+      fraction: 0.25
+  - name: data_fraction_50
+    description: "Train on half of the available data."
+    train_overrides:
+      train_fraction: 0.5
+      val_fraction: 1.0
+      max_steps: 6000
+    tags:
+      axis: data
+      fraction: 0.50
+  - name: data_full_plus
+    description: "Use full data with extended steps to test saturation."
+    train_overrides:
+      train_fraction: 1.0
+      val_fraction: 1.0
+      max_steps: 12000
+    tags:
+      axis: data
+      fraction: 1.0

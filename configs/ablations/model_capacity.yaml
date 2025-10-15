@@ -1,0 +1,26 @@
+experiments:
+  - name: model_tiny
+    description: "Smaller hidden dimension and fewer layers for speed."
+    model_overrides:
+      d_model: 256
+      num_layers: 2
+      dim_feedforward: 1024
+      dropout: 0.1
+    train_overrides:
+      learning_rate: 1.5e-4
+    tags:
+      axis: model
+      variant: tiny
+  - name: model_large
+    description: "Larger capacity to test scaling."
+    model_overrides:
+      d_model: 512
+      num_layers: 6
+      dim_feedforward: 2048
+      dropout: 0.1
+    train_overrides:
+      learning_rate: 8.0e-5
+      gradient_clipping: 0.8
+    tags:
+      axis: model
+      variant: large

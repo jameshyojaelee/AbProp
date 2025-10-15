@@ -1,0 +1,9 @@
+{
+  "commit": "baseline",
+  "timestamp": "2024-01-01T00:00:00Z",
+  "benchmarks": {
+    "perplexity": {"metric": "perplexity", "value": 1.95, "higher_is_better": false},
+    "cdr_classification": {"metric": "f1", "value": 0.89, "higher_is_better": true},
+    "liability_regression": {"metric": "rmse", "value": 0.27, "higher_is_better": false}
+  }
+}

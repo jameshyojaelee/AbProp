@@ -7,6 +7,8 @@ AbProp (Antibody Property Modeling) provides a lightweight, HPC-friendly scaffol
 - Character-level tokenizer and batching utilities tailored for heavy/light chain workloads.
 - Configurable Transformer baseline with metrics for MLM perplexity, CDR/frame classification, and liability regression.
 - Distributed-ready launch scripts supporting Slurm single-node and multi-node jobs with NCCL tuning hooks.
+- Visualization toolkit (attention, embeddings) plus an optional Streamlit dashboard for stakeholders, complemented by reusable publication figures, case study templates, and a Gradio-powered public demo.
+- Continuous benchmarking guardrail (`scripts/check_regression.py`, GitHub Action) with leaderboard tracking.
 
 ## Installation
 
@@ -16,7 +18,7 @@ On local machines you can still use a virtualenv:
 python -m venv .venv
 source .venv/bin/activate
 pip install --upgrade pip
-pip install -e '.[dev,serve,bench]'
+pip install -e '.[dev,serve,bench,viz,dashboard]'
 ```
 
 On the cluster, follow the HPC setup below for module loads and conda-based installs.
@@ -33,11 +35,20 @@ On the cluster, follow the HPC setup below for module loads and conda-based inst
 
 ## Usage
 
-Activate your environment, install the package, then explore the CLI interfaces:
+Activate your environment, install the package, then explore the CLI interfaces. For visualization, dashboards, and case studies consult [docs/TRAINING_GUIDE.md](docs/TRAINING_GUIDE.md), [docs/DASHBOARD.md](docs/DASHBOARD.md), and [docs/case_studies/README.md](docs/case_studies/README.md).
 
 ```bash
 python scripts/train.py --help
 ```
+
+Launch the public demo with:
+
+```bash
+pip install -r demo/requirements.txt
+python demo/app.py
+```
+
+For reproducibility instructions see [REPRODUCIBILITY.md](REPRODUCIBILITY.md).
 
 Example training dry-run with default config paths:
 

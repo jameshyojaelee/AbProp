@@ -10,6 +10,7 @@ import torch
 from fastapi import FastAPI, HTTPException
 
 from abprop.data import build_collate_fn
+from abprop.eval.uncertainty import sequence_perplexity_from_logits
 from abprop.models import AbPropModel, TransformerConfig
 from abprop.utils import load_yaml_config
 
@@ -127,6 +128,103 @@ class ModelWrapper:
 
         return mean_results
 
+    def score_perplexity_uncertainty(
+        self,
+        sequences: List[str],
+        *,
+        mc_samples: int = 20,
+        dropout: bool = True,
+        pad_token_id: int = 0,
+    ) -> Dict[str, List[float]]:
+        """Return mean and variance of perplexity estimates via MC dropout / ensembles."""
+        if mc_samples <= 0:
+            raise ValueError("mc_samples must be positive.")
+        batch = self.collate([{"sequence": seq} for seq in sequences])
+        input_ids = batch["input_ids"].to(self.device)
+        attention_mask = batch["attention_mask"].to(self.device)
+
+        sample_perplexities: List[torch.Tensor] = []
+        mc_passes = mc_samples if dropout else 1
+
+        with torch.no_grad():
+            for model in self.models:
+                passes = model.stochastic_forward(
+                    input_ids,
+                    attention_mask,
+                    tasks=("mlm",),
+                    mc_samples=mc_passes,
+                    enable_dropout=dropout,
+                    no_grad=True,
+                )
+                for out in passes:
+                    sample_perplexities.append(
+                        sequence_perplexity_from_logits(out["mlm_logits"].detach(), input_ids, pad_token_id=pad_token_id)
+                        .detach()
+                        .cpu()
+                    )
+
+        samples = torch.stack(sample_perplexities, dim=0)
+        mean = samples.mean(dim=0)
+        variance = samples.var(dim=0, unbiased=False)
+        std = variance.clamp_min(0.0).sqrt()
+        return {
+            "mean": mean.tolist(),
+            "variance": variance.tolist(),
+            "std": std.tolist(),
+        }
+
+    def score_liabilities_uncertainty(
+        self,
+        sequences: List[str],
+        *,
+        mc_samples: int = 20,
+        dropout: bool = True,
+    ) -> Dict[str, List[Dict[str, float]]]:
+        """Return mean and variance of liability predictions."""
+        if mc_samples <= 0:
+            raise ValueError("mc_samples must be positive.")
+        batch = self.collate([{"sequence": seq} for seq in sequences])
+        input_ids = batch["input_ids"].to(self.device)
+        attention_mask = batch["attention_mask"].to(self.device)
+
+        sample_preds: List[torch.Tensor] = []
+        mc_passes = mc_samples if dropout else 1
+
+        with torch.no_grad():
+            for model in self.models:
+                passes = model.stochastic_forward(
+                    input_ids,
+                    attention_mask,
+                    tasks=("reg",),
+                    mc_samples=mc_passes,
+                    enable_dropout=dropout,
+                    no_grad=True,
+                )
+                for out in passes:
+                    sample_preds.append(out["regression"].detach().cpu())
+
+        stacked = torch.stack(sample_preds, dim=0)
+        mean = stacked.mean(dim=0)
+        variance = stacked.var(dim=0, unbiased=False)
+        std = variance.clamp_min(0.0).sqrt()
+
+        def _to_dict(tensor: torch.Tensor) -> List[Dict[str, float]]:
+            results = []
+            for row in tensor:
+                results.append(
+                    {
+                        key: float(value)
+                        for key, value in zip(self.model_cfg.liability_keys, row.tolist())
+                    }
+                )
+            return results
+
+        return {
+            "mean": _to_dict(mean),
+            "variance": _to_dict(variance),
+            "std": _to_dict(std),
+        }
+
 
 def create_app(
     checkpoint: Union[Path, List[Path]],
@@ -176,6 +274,32 @@ def create_app(
         scores = wrapper.score_liabilities(sequences, return_std=return_std)
         return {"liabilities": scores}
 
+    @app.post("/score/perplexity/uncertainty")
+    def score_perplexity_uncertainty(payload: Dict[str, Any]) -> Dict[str, Any]:
+        sequences = payload.get("sequences")
+        if not isinstance(sequences, list) or not sequences:
+            raise HTTPException(status_code=400, detail="provide non-empty 'sequences' list")
+        mc_samples = int(payload.get("mc_samples", 20))
+        dropout = bool(payload.get("dropout", True))
+        try:
+            stats = wrapper.score_perplexity_uncertainty(sequences, mc_samples=mc_samples, dropout=dropout)
+        except ValueError as err:
+            raise HTTPException(status_code=400, detail=str(err))
+        return {"perplexity": stats}
+
+    @app.post("/score/liabilities/uncertainty")
+    def score_liabilities_uncertainty(payload: Dict[str, Any]) -> Dict[str, Any]:
+        sequences = payload.get("sequences")
+        if not isinstance(sequences, list) or not sequences:
+            raise HTTPException(status_code=400, detail="provide non-empty 'sequences' list")
+        mc_samples = int(payload.get("mc_samples", 20))
+        dropout = bool(payload.get("dropout", True))
+        try:
+            stats = wrapper.score_liabilities_uncertainty(sequences, mc_samples=mc_samples, dropout=dropout)
+        except ValueError as err:
+            raise HTTPException(status_code=400, detail=str(err))
+        return {"liabilities": stats}
+
     return app
 
 
@@ -209,4 +333,3 @@ def create_ensemble_app_from_cv(
 
 
 __all__ = ["create_app", "create_ensemble_app_from_cv", "ModelWrapper"]
-

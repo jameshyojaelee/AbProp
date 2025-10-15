@@ -1,0 +1,28 @@
+plan_name: baseline_sweep
+defaults:
+  base_output_dir: outputs/ablations
+  train_config: configs/train.yaml
+  model_config: configs/model.yaml
+  data_config: configs/data.yaml
+  train_script: scripts/train.py
+  python_executable: .venv/bin/python
+  seed: 42
+  extra_args: []
+  env:
+    PYTHONPATH: src
+includes:
+  model_capacity: configs/ablations/model_capacity.yaml
+  task_weights: configs/ablations/task_weights.yaml
+  data_regimes: configs/ablations/data_regimes.yaml
+  masking: configs/ablations/masking_rates.yaml
+  optimizers: configs/ablations/optimizers.yaml
+experiments:
+  - include: model_capacity
+  - include: task_weights
+  - include: data_regimes
+  - include: masking
+  - include: optimizers
+  - name: baseline_reference
+    description: "Reference run with default architecture/optimization settings."
+    tags:
+      axis: baseline

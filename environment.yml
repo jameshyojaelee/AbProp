@@ -1,0 +1,10 @@
+name: abprop
+channels:
+  - conda-forge
+dependencies:
+  - python=3.10
+  - pip
+  - pytorch=2.1
+  - cudatoolkit=11.8  # optional; remove on CPU-only setups
+  - pip:
+      - -r requirements.txt

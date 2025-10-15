@@ -53,6 +53,15 @@ bench = [
     "scipy>=1.10,<1.12",
     "scikit-learn>=1.2,<1.4",
 ]
+viz = [
+    "plotly>=5.18",
+    "scikit-learn>=1.2,<1.4",
+    "umap-learn>=0.5.5",
+]
+dashboard = [
+    "streamlit>=1.31",
+    "plotly>=5.18",
+]
 
 [project.urls]
 Homepage = "https://example.com/abprop"

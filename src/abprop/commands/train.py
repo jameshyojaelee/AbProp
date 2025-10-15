@@ -3,11 +3,12 @@
 from __future__ import annotations
 
 import argparse
+import random
 from pathlib import Path
 from typing import Dict, Iterable, List, Optional, Sequence
 
 import torch
-from torch.utils.data import DataLoader, Dataset
+from torch.utils.data import DataLoader, Dataset, Subset
 from torch.utils.data.distributed import DistributedSampler
 
 from abprop.data import BucketBatchSampler, OASDataset, build_collate_fn
@@ -77,6 +78,22 @@ class SyntheticSequenceDataset(Dataset):
         return self.examples[idx]
 
 
+class SubsetWithLengths(Subset):
+    def __init__(self, dataset: Dataset, indices: Sequence[int]) -> None:
+        super().__init__(dataset, list(indices))
+        if hasattr(dataset, "lengths"):
+            source_lengths = getattr(dataset, "lengths")
+            self.lengths = [source_lengths[i] for i in indices]
+        else:
+            self.lengths = []
+            for i in indices:
+                item = dataset[i]
+                length = item.get("length")
+                if length is None and "sequence" in item:
+                    length = len(item["sequence"])
+                self.lengths.append(int(length) if length is not None else 0)
+
+
 def build_synthetic_dataloaders(
     model_config: TransformerConfig,
     batch_size: int,
@@ -85,11 +102,12 @@ def build_synthetic_dataloaders(
     distributed: bool,
     rank: int,
     world_size: int,
+    mlm_probability: float,
 ) -> tuple[DataLoader, DataLoader]:
     motif = "ACDEFGHIKLMNPQRSTVWY"
     sequences = [(motif * ((i % 5) + 1))[:64] for i in range(num_samples)]
     dataset = SyntheticSequenceDataset(sequences, model_config.liability_keys)
-    collate = build_collate_fn(generate_mlm=True, mlm_probability=0.15)
+    collate = build_collate_fn(generate_mlm=True, mlm_probability=mlm_probability)
 
     if distributed:
         train_sampler = DistributedSampler(dataset, num_replicas=world_size, rank=rank, shuffle=True)
@@ -114,6 +132,10 @@ def build_oas_dataloaders(
     distributed: bool,
     rank: int,
     world_size: int,
+    mlm_probability: float,
+    train_fraction: float = 1.0,
+    val_fraction: float = 1.0,
+    seed: int = 42,
 ) -> tuple[DataLoader, Optional[DataLoader]]:
     processed_root = Path(data_cfg.get("processed_dir", "data/processed"))
     parquet_cfg = data_cfg.get("parquet", {})
@@ -134,8 +156,14 @@ def build_oas_dataloaders(
         )
 
     train_dataset = OASDataset(dataset_source, split="train")
+    if 0.0 < train_fraction < 1.0:
+        rng = random.Random(seed)
+        indices = list(range(len(train_dataset)))
+        rng.shuffle(indices)
+        subset_size = max(1, int(len(train_dataset) * train_fraction))
+        train_dataset = SubsetWithLengths(train_dataset, indices[:subset_size])
 
-    collate = build_collate_fn(generate_mlm=True, mlm_probability=0.15)
+    collate = build_collate_fn(generate_mlm=True, mlm_probability=mlm_probability)
     if distributed:
         train_sampler = DistributedSampler(train_dataset, num_replicas=world_size, rank=rank, shuffle=shuffle)
         train_loader = DataLoader(
@@ -171,6 +199,12 @@ def build_oas_dataloaders(
         if rank == 0:
             print(f"No validation split found in dataset at {dataset_source}; continuing without validation loader.")
     else:
+        if 0.0 < val_fraction < 1.0:
+            rng = random.Random(seed + 1)
+            indices = list(range(len(val_dataset)))
+            rng.shuffle(indices)
+            subset_size = max(1, int(len(val_dataset) * val_fraction))
+            val_dataset = SubsetWithLengths(val_dataset, indices[:subset_size])
         if distributed:
             val_sampler = DistributedSampler(val_dataset, num_replicas=world_size, rank=rank, shuffle=False)
             eval_loader = DataLoader(
@@ -275,6 +309,9 @@ def main(argv: list[str] | None = None) -> None:
         print(f"Per-rank batch size: {batch_size}")
     max_tokens = train_cfg.get("max_tokens", None)
     num_workers = train_cfg.get("num_workers", 0)
+    mlm_probability = float(train_cfg.get("mlm_probability", 0.15))
+    train_fraction = float(train_cfg.get("train_fraction", 1.0))
+    val_fraction = float(train_cfg.get("val_fraction", 1.0))
 
     if synthetic_mode:
         synthetic_samples = int(train_cfg.get("synthetic_samples", 256))
@@ -285,6 +322,7 @@ def main(argv: list[str] | None = None) -> None:
             distributed=dist_info["is_distributed"],
             rank=rank,
             world_size=world_size,
+            mlm_probability=mlm_probability,
         )
         max_steps = args.dry_run_steps if args.dry_run_steps > 0 else train_cfg.get("max_steps", 100)
     else:
@@ -299,6 +337,10 @@ def main(argv: list[str] | None = None) -> None:
                 distributed=dist_info["is_distributed"],
                 rank=rank,
                 world_size=world_size,
+                mlm_probability=mlm_probability,
+                train_fraction=train_fraction,
+                val_fraction=val_fraction,
+                seed=seed,
             )
         except FileNotFoundError as exc:
             if rank == 0:
@@ -328,7 +370,18 @@ def main(argv: list[str] | None = None) -> None:
         precision=train_cfg.get("precision", "amp"),
         tasks=tasks,
         report_interval=train_cfg.get("report_interval", 1),
+        optimizer=train_cfg.get("optimizer", "adamw"),
+        adam_beta1=train_cfg.get("adam_beta1", 0.9),
+        adam_beta2=train_cfg.get("adam_beta2", 0.999),
+        sgd_momentum=train_cfg.get("sgd_momentum", 0.0),
     )
+
+    mlflow_tags = {}
+    mlflow_cfg = train_cfg.get("mlflow", {})
+    if isinstance(mlflow_cfg, dict):
+        tags = mlflow_cfg.get("tags")
+        if isinstance(tags, dict):
+            mlflow_tags = {str(k): v for k, v in tags.items()}
 
     train_loop = TrainLoop(
         model,
@@ -336,6 +389,7 @@ def main(argv: list[str] | None = None) -> None:
         log_run_name="abprop-train",
         device=device,
         is_rank_zero_run=(rank == 0),
+        mlflow_tags=mlflow_tags,
     )
     train_loop.save_run_metadata({"train": train_cfg, "model": model_cfg, "data": data_cfg})
     train_loop.fit(train_loader, eval_loader)

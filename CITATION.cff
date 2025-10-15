@@ -1,0 +1,13 @@
+cff-version: 1.2.0
+message: "If you use AbProp in your work, please cite:"
+title: "AbProp: Antibody Property Modeling Toolkit"
+version: 0.1.0
+authors:
+  - family-names: "Lee"
+    given-names: "James"
+  - name: "AbProp Team"
+repository-code: "https://example.com/abprop/source"
+abstract: |
+  AbProp is a sequence-only antibody modeling toolkit that provides training, evaluation,
+  interpretability, and deployment assets for property prediction workflows.
+date-released: 2024-07-01

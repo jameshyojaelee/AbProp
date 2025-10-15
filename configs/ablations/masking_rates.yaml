@@ -1,0 +1,22 @@
+experiments:
+  - name: mask_low
+    description: "Reduce MLM masking probability to 10% for stability."
+    train_overrides:
+      mlm_probability: 0.10
+    tags:
+      axis: masking
+      probability: 0.10
+  - name: mask_default
+    description: "Default 15% masking."
+    train_overrides:
+      mlm_probability: 0.15
+    tags:
+      axis: masking
+      probability: 0.15
+  - name: mask_high
+    description: "Increase masking to 20% to encourage robustness."
+    train_overrides:
+      mlm_probability: 0.20
+    tags:
+      axis: masking
+      probability: 0.20
