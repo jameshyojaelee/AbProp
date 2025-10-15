@@ -18,7 +18,7 @@ Sequence-only antibody property modeling with batteries included: attention intr
 | CDR identification | Macro F1 ↑ | **0.89** | 0.88 | Token classifier on OAS hold-out |
 | Liability regression | RMSE ↓ | **0.27** | 0.29 | Includes MC-dropout uncertainty bands |
 
-See [docs/RESULTS.md](docs/RESULTS.md) for figure-ready summaries, ablations, and export commands. Case-study deep dives live under [docs/case_studies/](docs/case_studies/README.md).
+See [docs/RESULTS.md](docs/RESULTS.md) for figure-ready summaries, ablations, and export commands. Case-study deep dives live under [docs/CASE_STUDIES.md](docs/CASE_STUDIES.md).
 
 ---
 
@@ -125,11 +125,9 @@ abprop-serve --checkpoint outputs/real_data_run/checkpoints/best.pt --model-conf
 
 ## Documentation Map
 
-- [Getting started](docs/GETTING_STARTED.md) – install, data prep, first training run
-- [Training guide](docs/TRAINING.md) – curriculum, configs, multi-node tips
-- [Evaluation & interpretability](docs/EVALUATION.md) – benchmarks, uncertainty, attention tooling
-- [Dashboard](docs/DASHBOARD.md) – Streamlit pages, sample bundles, screenshots
-- [Case studies](docs/case_studies/README.md) – developability, CDR, QC, humanization, failure analysis
+- [Playbook](docs/README.md) – environment, data, training, evaluation, dashboards
+- [Results](docs/RESULTS.md) – metrics tables, export recipes, publication figures
+- [Case studies](docs/CASE_STUDIES.md) – developability, CDR, QC, humanization, failure analysis
 - [Reproducibility](REPRODUCIBILITY.md) – seeds, scripts, Docker, CI guardrails
 
 ---
@@ -150,7 +148,7 @@ Drop updated PNG/HTML assets into the directories above to keep slide decks and 
 
 **How do I monitor regressions?**  Run `python scripts/check_regression.py --new <fresh.json> --reference benchmarks/results/baseline_example.json --max-drop 0.05` or rely on the scheduled GitHub Action.
 
-**Can I humanize a murine antibody?**  Yes – generate proposals via masked language modeling (see `docs/case_studies/humanization.md`) and review liabilities + attention shifts in the dashboard.
+**Can I humanize a murine antibody?**  Yes – generate proposals via masked language modeling (see [docs/CASE_STUDIES.md](docs/CASE_STUDIES.md#humanization-pathways)) and review liabilities + attention shifts in the dashboard.
 
 **What if PyTorch fails to import (libflexiblas)?**  Use the provided Docker image or conda env, or install `libflexiblas3` on the target system.
 

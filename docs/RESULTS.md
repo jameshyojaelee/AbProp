@@ -31,7 +31,7 @@ Each figure is exported as PDF + PNG under `docs/figures/publication/`. Update p
 
 ### Case Study Index
 
-Detailed narratives live under [`docs/case_studies/`](case_studies/README.md). Use them to capture developability dives, CDR reviews, QC incidents, humanization experiments, and failure analyses with links back to raw artifacts.
+Detailed narratives live under [`docs/CASE_STUDIES.md`](CASE_STUDIES.md). Use them to capture developability dives, CDR reviews, QC incidents, humanization experiments, and failure analyses with links back to raw artifacts.
 
 To contextualise AbProp’s performance, we evaluate a suite of lightweight
 heuristics that require no gradient updates or heavy training:
