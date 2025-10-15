@@ -80,7 +80,7 @@ These narratives bundle real-world analyses with direct pointers to the underlyi
 1. Weekly GitHub Action runs benchmark suite → `benchmarks/results/latest.json`.
 2. `scripts/check_regression.py --max-drop 0.05` compares against baseline.
 3. Notebook adds control limits (mean ± 3σ) and exports `benchmarks/results/dashboard.csv`.
-4. Reviewers update [LEADERBOARD.md](../LEADERBOARD.md) after validation.
+4. Reviewers update [LEADERBOARD.md](LEADERBOARD.md) after validation.
 
 ### Observations
 - Perplexity stayed within ±0.03 of baseline (1.95) across two weeks.

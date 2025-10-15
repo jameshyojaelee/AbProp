@@ -128,7 +128,7 @@ abprop-serve --checkpoint outputs/real_data_run/checkpoints/best.pt --model-conf
 - [Playbook](docs/README.md) – environment, data, training, evaluation, dashboards
 - [Results](docs/RESULTS.md) – metrics tables, export recipes, publication figures
 - [Case studies](docs/CASE_STUDIES.md) – developability, CDR, QC, humanization, failure analysis
-- [Reproducibility](REPRODUCIBILITY.md) – seeds, scripts, Docker, CI guardrails
+- [Reproducibility](docs/REPRODUCIBILITY.md) – seeds, scripts, Docker, CI guardrails
 
 ---
 

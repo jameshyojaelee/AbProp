@@ -87,7 +87,7 @@ python scripts/eval.py \
 ### Benchmark Suite
 - Run everything: `python scripts/run_benchmarks.py --checkpoint ... --all --html-report`
 - Specific tracks: `python scripts/run_benchmarks.py --checkpoint ... --benchmarks perplexity liability cdr_classification`
-- Quick reference metrics live in [LEADERBOARD.md](../LEADERBOARD.md)
+- Quick reference metrics live in [LEADERBOARD.md](LEADERBOARD.md)
 
 ### Visual Analytics
 - Attention: `python scripts/visualize_attention.py --checkpoint ... --sequence examples/attention_success.fa --output outputs/attention --label success --interactive`
@@ -171,7 +171,7 @@ Set `ABPROP_DASHBOARD_ROOT`/`ABPROP_DASHBOARD_CONFIG` and `ABPROP_DEMO_CHECKPOIN
 
 - Results & figures: [docs/RESULTS.md](RESULTS.md)
 - Case studies: [docs/CASE_STUDIES.md](CASE_STUDIES.md)
-- Reproducibility checklist: [../REPRODUCIBILITY.md](../REPRODUCIBILITY.md)
+- Reproducibility checklist: [REPRODUCIBILITY.md](REPRODUCIBILITY.md)
 - Model registry cards: [../models/MODEL_CARDS.md](../models/MODEL_CARDS.md)
 - Demo quickstart (public): [demo/README.md](../demo/README.md)
 
