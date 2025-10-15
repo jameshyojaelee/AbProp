@@ -52,7 +52,7 @@ liability:
 # Developability Benchmark
 # Therapeutic antibody ranking and clinical progression prediction
 developability:
-  data_path: ./data/processed/therapeutic  # Specialized therapeutic dataset
+  data_path: ./data/processed/therapeutic_benchmark/therapeutic_benchmark.parquet
   batch_size: 16
   max_samples: null
   clinical_phases:
@@ -68,7 +68,7 @@ developability:
 # Zero-Shot Generalization Benchmark
 # Evaluate on unseen species and germlines
 zero_shot:
-  data_path: ./data/processed/zero_shot  # Dataset with diverse/rare species
+  data_path: ./data/processed/zero_shot/zero_shot.parquet
   batch_size: 32
   max_samples: null
   unseen_species:

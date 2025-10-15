@@ -188,6 +188,23 @@ print(f"Perplexity: {result.metrics['overall_perplexity']:.2f}")
 
 **Purpose**: Evaluate therapeutic antibody developability prediction.
 
+**Dataset schema (`data/processed/therapeutic_benchmark/therapeutic_benchmark.parquet`)**
+
+| Column | Type | Description |
+|--------|------|-------------|
+| `sequence` | str | Heavy or light chain amino-acid sequence |
+| `chain` | str | Chain type (`H`/`L`) |
+| `split` | str | Dataset split (`train`, `val`, `test`) |
+| `length` | int | Sequence length |
+| `liability_ln` | JSON str | Canonical liabilities (nglyc, deamidation, isomerization, oxidation, free_cysteines) normalized by length |
+| `liability_counts` | JSON str | Raw liability counts matching the canonical keys |
+| `clinical_phase` | int | Clinical stage (0 = preclinical … 4 = approved) |
+| `aggregation_score` | float | Experimental or in-silico aggregation propensity |
+| `immunogenicity_score` | float | Immunogenicity risk estimate |
+| `developability_score` | float | Composite developability target |
+| `known_issues` | str | Optional free-text description of observed liabilities |
+| `therapeutic_id` | str | Identifier for traceability |
+
 **What it measures**:
 - Composite developability score (from liabilities)
 - ROC-AUC for clinical progression (approved vs not)
@@ -229,6 +246,20 @@ print(f"Perplexity: {result.metrics['overall_perplexity']:.2f}")
 ### 5. Zero-Shot Benchmark
 
 **Purpose**: Evaluate generalization to unseen species and germline families.
+
+**Dataset schema (`data/processed/zero_shot/zero_shot.parquet`)**
+
+| Column | Type | Description |
+|--------|------|-------------|
+| `sequence` | str | Antibody sequence used for evaluation |
+| `chain` | str | Chain type (`H`/`L`) |
+| `split` | str | Dataset split (`train`, `val`, `test`) |
+| `length` | int | Sequence length |
+| `species` | str | Source species (e.g., `camelus dromedarius`, `homo sapiens`) |
+| `germline_v` | str | V gene designation |
+| `germline_j` | str | J gene designation |
+| `liability_ln` | JSON str | Canonical liabilities normalized by length |
+| `liability_counts` | JSON str | Raw liability counts |
 
 **What it measures**:
 - Perplexity on rare/novel species (camel, llama, shark)

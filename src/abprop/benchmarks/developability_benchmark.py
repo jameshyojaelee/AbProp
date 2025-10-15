@@ -13,7 +13,10 @@ from sklearn.metrics import roc_auc_score, roc_curve
 import torch
 from torch.utils.data import DataLoader
 
-from abprop.data import OASDataset, build_collate_fn
+import pandas as pd
+from torch.utils.data import Dataset
+
+from abprop.data import build_collate_fn
 from abprop.utils.liabilities import CANONICAL_LIABILITY_KEYS
 
 from .registry import Benchmark, BenchmarkConfig, BenchmarkResult, register_benchmark
@@ -49,6 +52,13 @@ class DevelopabilityBenchmark(Benchmark):
         # Note: This assumes a specialized dataset with therapeutic antibodies
         # In practice, you may need to filter or use a separate dataset
         dataset = OASDataset(self.config.data_path, split="test")
+        required = {"clinical_phase", "aggregation_score", "immunogenicity_score"}
+        missing = required - set(dataset.frame.columns)
+        if missing:
+            raise ValueError(
+                "Developability benchmark requires the following columns in the dataset: "
+                f"{sorted(required)}. Missing: {sorted(missing)}"
+            )
         collate_fn = build_collate_fn(generate_mlm=False)
         return DataLoader(
             dataset,

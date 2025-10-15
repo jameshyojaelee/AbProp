@@ -16,3 +16,11 @@ liability:
     - isomerization
     - oxidation
     - free_cysteines
+developability:
+  data_path: ./data/processed/therapeutic_benchmark/therapeutic_benchmark.parquet
+  batch_size: 4
+  max_samples: 8
+zero_shot:
+  data_path: ./data/processed/zero_shot/zero_shot.parquet
+  batch_size: 4
+  max_samples: 8

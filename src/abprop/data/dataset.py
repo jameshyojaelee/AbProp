@@ -93,10 +93,7 @@ class OASDataset(Dataset):
             if missing_optional:
                 self.columns -= missing_optional
 
-        if columns is None:
-            read_columns = None
-        else:
-            read_columns = list(self.columns | {"split"})
+        read_columns = None if columns is None else list(self.columns | {"split"})
         df = pd.read_parquet(
             self.parquet_dir,
             columns=read_columns,

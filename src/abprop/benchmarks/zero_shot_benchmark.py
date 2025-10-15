@@ -43,6 +43,13 @@ class ZeroShotBenchmark(Benchmark):
             DataLoader with diverse antibody sequences
         """
         dataset = OASDataset(self.config.data_path, split="test")
+        required = {"species", "germline_v"}
+        missing = required - set(dataset.frame.columns)
+        if missing:
+            raise ValueError(
+                "Zero-shot benchmark requires dataset columns "
+                f"{sorted(required)}. Missing: {sorted(missing)}"
+            )
         collate_fn = build_collate_fn(generate_mlm=True)
         return DataLoader(
             dataset,
