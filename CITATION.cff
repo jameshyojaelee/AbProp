@@ -5,9 +5,9 @@ version: 0.1.0
 authors:
   - family-names: "Lee"
     given-names: "James"
-  - name: "AbProp Team"
+  - name: "AbProp"
 repository-code: "https://example.com/abprop/source"
 abstract: |
   AbProp is a sequence-only antibody modeling toolkit that provides training, evaluation,
   interpretability, and deployment assets for property prediction workflows.
-date-released: 2024-07-01
+date-released: 2025-10-10
