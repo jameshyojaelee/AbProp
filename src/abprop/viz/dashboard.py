@@ -62,6 +62,7 @@ def page_overview(cfg: DashboardConfig) -> None:
         - Select a workspace page from the sidebar.
         - Point `ABPROP_DASHBOARD_ROOT` to your experiment directory or override individual paths via `ABPROP_DASHBOARD_CONFIG`.
         - Drop PNG/HTML artifacts produced by the visualization scripts into the suggested directories for instant previews.
+        - Review narrative context in [docs/case_studies/README.md](../../docs/case_studies/README.md) and link key examples here.
         """
     )
 

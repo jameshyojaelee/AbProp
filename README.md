@@ -1,208 +1,180 @@
 # AbProp
 
-AbProp (Antibody Property Modeling) provides a lightweight, HPC-friendly scaffold for building, training, and evaluating sequence-only antibody models with PyTorch 2.1.2 + CUDA 12.x.
+[![License](https://img.shields.io/badge/license-Apache--2.0-blue.svg)](LICENSE)
+[![Python](https://img.shields.io/badge/python-3.10+-3776AB.svg)](https://www.python.org/)
+[![PyTorch](https://img.shields.io/badge/PyTorch-2.1-orange.svg)](https://pytorch.org/)
+[![CI](https://img.shields.io/badge/ci-benchmark--guardrail-success.svg)](.github/workflows/benchmark.yml)
+[![Docs](https://img.shields.io/badge/docs-full-green.svg)](docs/README.md)
 
-## Features
-- Data ETL pipeline for OAS-derived antibody sequences with schema validation targets.
-- Character-level tokenizer and batching utilities tailored for heavy/light chain workloads.
-- Configurable Transformer baseline with metrics for MLM perplexity, CDR/frame classification, and liability regression.
-- Distributed-ready launch scripts supporting Slurm single-node and multi-node jobs with NCCL tuning hooks.
-- Visualization toolkit (attention, embeddings) plus an optional Streamlit dashboard for stakeholders, complemented by reusable publication figures, case study templates, and a Gradio-powered public demo.
-- Continuous benchmarking guardrail (`scripts/check_regression.py`, GitHub Action) with leaderboard tracking.
+Sequence-only antibody property modeling with batteries included: attention introspection, embedding analytics, dashboards, demo apps, guardrails, and a lightweight registry so teams can move from experiments to production quickly.
 
-## Installation
+---
 
-On local machines you can still use a virtualenv:
+## Performance Snapshot
+
+| Task | Metric | Validation | Test | Notes |
+|------|--------|------------|------|-------|
+| Masked language modeling | Perplexity ↓ | **1.95** | 2.01 | Baseline checkpoint (`benchmarks/results/baseline_example.json`) |
+| CDR identification | Macro F1 ↑ | **0.89** | 0.88 | Token classifier on OAS hold-out |
+| Liability regression | RMSE ↓ | **0.27** | 0.29 | Includes MC-dropout uncertainty bands |
+
+See [docs/RESULTS.md](docs/RESULTS.md) for figure-ready summaries, ablations, and export commands. Case-study deep dives live under [docs/case_studies/](docs/case_studies/README.md).
+
+---
+
+## Quickstart
+
+### 1. Pick an environment
+
+- **Pip**
+  ```bash
+  python -m venv .venv
+  source .venv/bin/activate
+  pip install --upgrade pip
+  pip install -e '.[dev,serve,bench,viz,dashboard]'
+  ```
+- **Colab**
+  - Open [notebooks/quickstart.ipynb](https://colab.research.google.com/github/abprop/abprop/blob/main/notebooks/quickstart.ipynb)
+  - Run the install cell: `!pip install git+https://github.com/abprop/abprop.git`
+  - Execute the demo cell to reproduce attention visuals in the hosted runtime
+- **Conda**
+  ```bash
+  conda env create -f environment.yml
+  conda activate abprop
+  ```
+- **Docker**
+  ```bash
+  docker build -t abprop .
+  docker run -it --rm -v "$PWD":/workspace -w /workspace abprop bash
+  ```
+
+### 2. Reproduce essentials
 
 ```bash
-python -m venv .venv
-source .venv/bin/activate
-pip install --upgrade pip
-pip install -e '.[dev,serve,bench,viz,dashboard]'
+scripts/reproduce_minimal.sh   # sanity-check visualizations
+scripts/reproduce_all.sh       # full pipeline (training → eval → viz → registry)
 ```
 
-On the cluster, follow the HPC setup below for module loads and conda-based installs.
+### 3. Launch tooling
 
-## Project Layout
-- `src/abprop/`: Python package (utils, data, tokenizers, models, train, eval, server).
-- `configs/`: Hydra-style YAML configs for data, model, training, and distribution.
-- `scripts/`: CLI entrypoints for ETL, training, evaluation, and Slurm launch helpers.
-- `slurm/`: Batch templates with NCCL environment guidance.
-- `tests/`: Unit test skeletons to extend with ETL/tokenizer coverage.
-- `data/`: Default data directories (`raw`, `interim`, `processed`).
-- `outputs/`: Default experiment output directory (logs, checkpoints, metrics).
-- `docs/`: Supplementary documentation (see [docs/README.md](docs/README.md) for details).
+| Asset | Command |
+|-------|---------|
+| Streamlit dashboard | `python scripts/launch_dashboard.py --root outputs` |
+| Gradio demo | `pip install -r demo/requirements.txt && python demo/app.py` |
+| Attention explorer | `python scripts/visualize_attention.py --help` |
+| Embedding explorer | `python scripts/visualize_embeddings.py --help` |
 
-## Usage
+---
 
-Activate your environment, install the package, then explore the CLI interfaces. For visualization, dashboards, and case studies consult [docs/TRAINING_GUIDE.md](docs/TRAINING_GUIDE.md), [docs/DASHBOARD.md](docs/DASHBOARD.md), and [docs/case_studies/README.md](docs/case_studies/README.md).
+## Model Zoo
+
+| ID | Description | Val Metric | Checkpoint | Card |
+|----|-------------|------------|------------|------|
+| `best-val-2024-07-01` | Production-ready baseline | F1 0.89 | `outputs/real_data_run/checkpoints/best.pt` | `models/cards/best-val-2024-07-01.md` |
+| `repro-run` | Reproducibility script snapshot | Perplexity 1.95 | `outputs/real_data_run/checkpoints/best.pt` | `models/cards/repro-run.md` |
+
+Manage entries with the registry CLI:
 
 ```bash
-python scripts/train.py --help
+python scripts/registry.py list
+python scripts/registry.py best --metric f1 --higher
+python scripts/registry.py export-card --id best-val-2024-07-01 --output models/cards/best-val-2024-07-01.md
 ```
 
-Launch the public demo with:
+---
 
-```bash
-pip install -r demo/requirements.txt
-python demo/app.py
+## Usage Examples
+
+### Python inference
+
+```python
+from pathlib import Path
+import torch
+from abprop.models import AbPropModel, TransformerConfig
+from abprop.tokenizers.aa import collate_batch
+
+checkpoint = Path("outputs/real_data_run/checkpoints/best.pt")
+state = torch.load(checkpoint, map_location="cpu")
+config = TransformerConfig(**state.get("model_config", {}))
+model = AbPropModel(config).eval()
+model.load_state_dict(state["model_state"], strict=False)
+
+batch = collate_batch(["EVQLVESGGGLVQPGGSLRLSCAASGFTFSSYAMHWV", "QVQLVESGGDLVQPGGSLRLSCAASGYNFNNYMSWV"])
+outputs = model(batch["input_ids"], batch["attention_mask"], tasks=("mlm", "cls", "reg"))
+print(outputs["metrics"], outputs["regression"].tolist())
 ```
 
-For reproducibility instructions see [REPRODUCIBILITY.md](REPRODUCIBILITY.md).
-
-Example training dry-run with default config paths:
+### Fine-tuning via CLI
 
 ```bash
 python scripts/train.py \
   --config-path configs/train.yaml \
   --data-config configs/data.yaml \
-  --model-config configs/model.yaml
+  --model-config configs/model.yaml \
+  --output-dir outputs/new_run
 ```
 
-## Development
-
-- `make format` – format with Ruff.
-- `make lint` – static checks (Ruff + mypy).
-- `make test` – run pytest.
-- `make clean` – remove build artifacts.
-
-Extend the unit tests under `tests/` to match new components and keep the configs in sync with your experiments.
-
-
-
-## REST API
-
-Install the serving extras first (in your env):
+### REST API peek
 
 ```bash
 pip install 'abprop[serve]'
+abprop-serve --checkpoint outputs/real_data_run/checkpoints/best.pt --model-config configs/model.yaml
 ```
 
-Run the inference server:
+---
 
-```bash
-abprop-serve --checkpoint outputs/checkpoints/best.pt --model-config configs/model.yaml --host 0.0.0.0 --port 8000
+## Documentation Map
+
+- [Getting started](docs/GETTING_STARTED.md) – install, data prep, first training run
+- [Training guide](docs/TRAINING.md) – curriculum, configs, multi-node tips
+- [Evaluation & interpretability](docs/EVALUATION.md) – benchmarks, uncertainty, attention tooling
+- [Dashboard](docs/DASHBOARD.md) – Streamlit pages, sample bundles, screenshots
+- [Case studies](docs/case_studies/README.md) – developability, CDR, QC, humanization, failure analysis
+- [Reproducibility](REPRODUCIBILITY.md) – seeds, scripts, Docker, CI guardrails
+
+---
+
+## Visual Gallery
+
+| Attention rollout (success) | Embedding UMAP comparison | Dashboard overview |
+|-----------------------------|---------------------------|--------------------|
+| `outputs/attention/success/aggregated/rollout.png` | `docs/figures/embeddings/umap_2d/comparison/embedded_points.csv` | `docs/figures/dashboard/overview.png` |
+
+Drop updated PNG/HTML assets into the directories above to keep slide decks and papers in sync with latest experiments.
+
+---
+
+## Frequently Asked Questions
+
+**Where do I get data?**  See [data/DATA_PROVENANCE.md](data/DATA_PROVENANCE.md) for download links and checksums.
+
+**How do I monitor regressions?**  Run `python scripts/check_regression.py --new <fresh.json> --reference benchmarks/results/baseline_example.json --max-drop 0.05` or rely on the scheduled GitHub Action.
+
+**Can I humanize a murine antibody?**  Yes – generate proposals via masked language modeling (see `docs/case_studies/humanization.md`) and review liabilities + attention shifts in the dashboard.
+
+**What if PyTorch fails to import (libflexiblas)?**  Use the provided Docker image or conda env, or install `libflexiblas3` on the target system.
+
+---
+
+## Project Layout
+
+```
+├── configs/                # YAML configs, dashboards, publication styles
+├── data/                   # Raw, processed, provenance files
+├── demo/                   # Gradio app + requirements
+├── docs/                   # Guides, results, case studies, figures
+├── scripts/                # CLI utilities (training, evaluation, viz, registry)
+├── src/abprop/             # Library code (models, viz, registry, eval)
+└── tests/                  # Unit tests (model, registry, viz helpers)
 ```
 
-Sample requests:
+---
 
-```bash
-curl -X GET http://localhost:8000/health
+## Contributing
 
-curl -X POST http://localhost:8000/score/perplexity   -H 'Content-Type: application/json'   -d '{"sequences": ["ACDEFG", "ACDGST"]}'
+1. Create a feature branch and update or add tests (`PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 pytest`).
+2. Run linting (`make lint`) and formatters (`make format`).
+3. Update documentation and registry entries when behavior changes.
+4. Open a PR with before/after artifacts (attention maps, benchmark JSON, etc.).
 
-curl -X POST http://localhost:8000/score/liabilities   -H 'Content-Type: application/json'   -d '{"sequences": ["ACDEFG", "ACDGST"]}'
-```
-
-
-## HPC Setup
-
-Load base modules (adjust module names to your site):
-
-```bash
-module load Miniconda3/23.10.0-1
-module load PyTorch/2.1.2
-module load CUDA/12.3.0
-module load cuDNN
-module load NCCL
-```
-
-Create a conda environment or container image and install AbProp with extras:
-
-```bash
-module load Miniconda3/23.10.0-1
-conda create -p $HOME/.conda/abprop python=3.10 -y
-conda activate $HOME/.conda/abprop
-python -m pip install --upgrade pip
-pip install -e '.[dev,serve,bench]'
-```
-
-> **Container note**: If you prefer containers, build an image with the same dependency set (PyTorch 2.1.2 + CUDA 12.3 + NCCL) and mount the project root plus `./data`/`./outputs` directories into the container.
-
-## Commands
-
-ETL:
-
-```bash
-abprop-etl --input data/raw/oas.tsv --out data/processed/oas --validate
-```
-
-Single GPU training:
-
-```bash
-abprop-train --distributed none --config-path configs/train.yaml
-```
-
-Single-node DDP (torchrun):
-
-```bash
-torchrun --standalone --nproc_per_node 4 python -m abprop.commands.train --distributed ddp --config-path configs/train.yaml
-```
-
-Multi-node (Slurm helper):
-
-```bash
-abprop-launch --nodes 2 --gpus-per-node 4 --config configs/train.yaml
-```
-
-Manual multi-node example: edit `slurm/multi_node.sbatch` and submit with `sbatch` for full control over resources.
-
-Difficulty-stratified evaluation:
-
-```bash
-python scripts/create_difficulty_splits.py \
-  --input data/processed/oas_real_full \
-  --output data/processed/stratified_test \
-  --split test
-
-python scripts/run_benchmarks.py \
-  --checkpoint outputs/checkpoints/best.pt \
-  --benchmarks stratified_difficulty \
-  --html-report
-```
-
-## MLflow Tracking
-
-By default AbProp logs to `./mlruns`. Override with `export MLFLOW_TRACKING_URI=/path/to/mlruns` before launching training. Each run logs:
-
-- CSV logs under `outputs/logs/` (even without MLflow).
-- Checkpoints in `outputs/checkpoints/` (last + best-by-metric).
-- MLflow run with parameters, metrics, and artifacts (confusion matrix, scatter plots).
-
-Launch the MLflow UI locally:
-
-```bash
-mlflow ui --backend-store-uri ./mlruns
-```
-
-
-## Data
-
-The project includes real antibody sequence data from structural databases:
-
-- **Processed Dataset (Recommended)**: `data/processed/oas_real_full/` (1,502 sequences)
-  - Source: SAbDab/PDB crystal structures
-  - Train: 1,209 | Val: 144 | Test: 149
-  - 38 species including human, mouse, llama, etc.
-  - Resolution < 4.0 Å, high-quality structures only
-
-For details on data acquisition, processing, and benchmarking datasets, see **[docs/README.md](docs/README.md)**.
-
-## Troubleshooting
-
-**NCCL**
-- Use the settings in `slurm/env_nccl.sh` as a baseline (`NCCL_SOCKET_IFNAME`, `NCCL_NET_GDR_LEVEL`).
-- Enable `export NCCL_DEBUG=warn` for verbose diagnostics; look for peer failures or interface issues.
-- Confirm GPUs are visible with `nvidia-smi` on every node and that firewall rules allow intra-node TCP/IB traffic.
-
-**Slurm / torchrun**
-- Confirm rendezvous variables by printing `$MASTER_ADDR` and `$MASTER_PORT` in your batch script.
-- Test connectivity with `srun --ntasks=$WORLD_SIZE hostname` prior to launching torchrun.
-- For PMI versions that conflict with torchrun, add `--mpi=pmix` (or your site default) to `srun`.
-
-## Documentation
-
-See the [`docs/`](docs/) directory for detailed documentation:
-- **[REAL_DATA_SUMMARY.md](docs/REAL_DATA_SUMMARY.md)** - Real antibody data statistics and usage
-- **[DATA_ACQUISITION_GUIDE.md](docs/DATA_ACQUISITION_GUIDE.md)** - How to download additional data
-- **[EVALUATION_PROMPTS.md](docs/EVALUATION_PROMPTS.md)** - Roadmap for evaluation infrastructure
+By contributing you agree to the [Apache 2.0](LICENSE) license.

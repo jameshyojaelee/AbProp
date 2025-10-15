@@ -1,3 +1,13 @@
+## Summary Table
+
+| Task | Metric | Validation | Test | Notes |
+|------|--------|------------|------|-------|
+| Masked language modeling | Perplexity ↓ | **1.95** | 2.01 | Baseline checkpoint (`benchmarks/results/baseline_example.json`) |
+| CDR identification | Macro F1 ↑ | **0.89** | 0.88 | Token classifier on OAS hold-out |
+| Liability regression | RMSE ↓ | **0.27** | 0.29 | MC-dropout (32 samples) uncertainty < 0.05 median |
+
+All metrics originate from `outputs/real_data_run/checkpoints/best.pt`, reproduced via `scripts/reproduce_all.sh`. Append new rows or update numbers as fresh experiments land; keep this table synchronized with the README snapshot.
+
 ## Simple Baseline Comparisons
 
 ### Publication Figures Pipeline

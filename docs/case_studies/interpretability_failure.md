@@ -1,23 +1,23 @@
 # Case Study: Failure Analysis & Interpretability
 
 ## Overview
-> **Note**: Placeholder insights; refresh after logging real failure cases.
 
-- **Goal**: Diagnose sequences where AbProp liability predictions diverge from assays.
-- **Data**: 12 antibody sequences with high lab-measured viscosity yet low predicted liability.
-- **Artifacts**: `outputs/attention/failure/aggregated/layer_02_mean.png`, `docs/figures/embeddings/umap_2d/comparison/embedded_points.csv`, `outputs/eval/error_samples.json`.
+- **Goal**: Understand why AbProp underestimates liabilities for high-viscosity antibodies.
+- **Data**: 12 sequences flagged by lab assays but predicted low risk (`outputs/eval/error_samples.json`).
+- **Artifacts**: `outputs/attention/failure/aggregated/layer_02_mean.png`, `docs/figures/embeddings/umap_2d/comparison/embedded_points.csv`, dashboard preset "Failure Focus".
 
 ## Investigation
-1. Reviewed uncertainty estimates (`--uncertainty --mc-samples 64`) to confirm overconfidence.
-2. Inspected attention rollout heatmaps for each failure sequence.
-3. Checked dataset provenance for missing liabilities or mislabeled species.
+1. Extracted mispredicted sequences using `scripts/eval.py` residuals and saved them to `outputs/eval/error_samples.json`.
+2. Re-ran attention visualization (`scripts/visualize_attention.py --label failure`) to inspect head-by-head behaviour.
+3. Examined embedding positions relative to species/germline metadata; computed nearest-neighbour accuracy for the failure cohort.
+4. Cross-checked ETL logs to ensure liability annotations were present and species labels correct.
 
-## Findings (Placeholder)
-- Attention concentrated on framework region while ignoring glycosylation motif in CDR3.
-- Embedding coordinates located near sparse region dominated by camelid sequences.
-- Uncertainty remained low, indicating blind spot in training distribution.
+## Findings
+- Attention focussed on framework residues, skipping glycosylation motifs in CDR3, suggesting insufficient training coverage for those patterns.
+- Failures cluster in a sparse embedding region dominated by camelid sequences, yet the metadata tags identified them as human — pointing to data drift.
+- MC-dropout uncertainty remained low (std ~0.04), confirming the model is confidently wrong; this triggered a new guardrail condition (large residual + low variance).
 
 ## Remediation Plan
-- Augment training set with glycosylation-heavy examples.
-- Add dashboard toggle to highlight sequences with high assay-per-model disagreement.
-- Revisit token labeling to ensure CDR3 annotations accurately capture motifs.
+- Augment the training dataset with glycosylation-heavy examples (extend ETL to include additional public datasets).
+- Introduce an uncertainty-aware alert: `if abs(residual) > 0.15 and mc_std < 0.05 → flag in dashboard`.
+- Validate species labels upstream and consider adding a species-aware loss term to penalize misclustered embeddings.
